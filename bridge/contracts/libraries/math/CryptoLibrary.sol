@@ -287,6 +287,273 @@ library CryptoLibrary {
         );
     }
 
+    // Verify takes byte slice message, signature sig (element of G1),
+    // public key pubK (element of G2), and checks that sig is a valid
+    // signature for pubK for message. Also look at the definition of H2.
+    function verifySignatureASM(
+        bytes memory message,
+        uint256[2] memory sig,
+        uint256[4] memory pubK
+    ) internal view returns (bool v) {
+        uint256[2] memory hashPoint;
+        hashPoint = hashToG1ASM(message);
+        v = bn128CheckPairing(
+            [
+                sig[0],
+                sig[1],
+                H2_XI,
+                H2_X,
+                H2_YI,
+                H2_Y,
+                hashPoint[0],
+                hashPoint[1],
+                pubK[0],
+                pubK[1],
+                pubK[2],
+                pubK[3]
+            ]
+        );
+    }
+
+    // Verify takes byte slice message, signature sig (element of G1),
+    // public key pubK (element of G2), and checks that sig is a valid
+    // signature for pubK for message. Also look at the definition of H2.
+    function verifySignatureASM2(
+        bytes memory message,
+        uint256[2] memory sig,
+        uint256[4] memory pubK
+    ) internal view returns (bool v) {
+        uint256[2] memory hashPoint;
+        hashPoint = hashToG1ASM2(message);
+        v = bn128CheckPairing(
+            [
+                sig[0],
+                sig[1],
+                H2_XI,
+                H2_X,
+                H2_YI,
+                H2_Y,
+                hashPoint[0],
+                hashPoint[1],
+                pubK[0],
+                pubK[1],
+                pubK[2],
+                pubK[3]
+            ]
+        );
+    }
+
+    /// HashToG1 takes byte slice message and outputs an element of G1. Optimized version of `hashToG1`
+    /// written in EVM assembly.
+    function verifySignatureASM3(
+        bytes memory message,
+        uint256[2] memory sig,
+        uint256[4] memory pubK
+    ) internal view returns (bool v) {
+        assembly {
+            function memCopy(dest, src, len) {
+                if lt(len, 32) {
+                    mstore(0, "invalid len")
+                    revert(0, 32)
+                }
+                // Copy word-length chunks while possible
+                for {
+
+                } gt(len, 31) {
+                    len := sub(len, 32)
+                } {
+                    mstore(dest, mload(src))
+                    src := add(src, 32)
+                    dest := add(dest, 32)
+                }
+
+                if iszero(eq(len, 0)) {
+                    // Copy remaining bytes
+                    let mask := sub(exp(256, sub(32, len)), 1)
+                    // e.g len = 4, yields
+                    // mask    = 00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+                    // notMask = ffffffff00000000000000000000000000000000000000000000000000000000
+                    let srcpart := and(mload(src), not(mask))
+                    let destpart := and(mload(dest), mask)
+                    mstore(dest, or(destpart, srcpart))
+                }
+            }
+
+            function bn128CheckPairing(ptr) -> result {
+                let success := staticcall(gas(), 0x08, ptr, 384, ptr, 32)
+                if iszero(success) {
+                    mstore(0, "failed bn128 pairing")
+                    revert(0, 0x20)
+                }
+                result := mload(ptr)
+            }
+
+            function bn128IsOnCurve(p0, p1) -> result {
+                let o1 := mulmod(p0, p0, FIELD_MODULUS)
+                o1 := mulmod(p0, o1, FIELD_MODULUS)
+                o1 := addmod(o1, 3, FIELD_MODULUS)
+                let o2 := mulmod(p1, p1, FIELD_MODULUS)
+                result := eq(o1, o2)
+            }
+
+            function baseToG1(ptr, t, output) {
+                let fp := add(ptr, 0xc0)
+                let ap1 := mulmod(t, t, FIELD_MODULUS)
+
+                let alpha := mulmod(ap1, addmod(ap1, HASH_CONST_4, FIELD_MODULUS), FIELD_MODULUS)
+                // invert alpha
+                mstore(add(ptr, 0x60), alpha)
+                mstore(add(ptr, 0x80), P_MINUS2)
+                if iszero(staticcall(gas(), 0x05, ptr, 0xc0, fp, 0x20)) {
+                    mstore(0, "exp mod failed at 1")
+                    revert(0, 0x20)
+                }
+                alpha := mload(fp)
+
+                ap1 := mulmod(ap1, ap1, FIELD_MODULUS)
+
+                let x := mulmod(ap1, HASH_CONST_2, FIELD_MODULUS)
+                x := mulmod(x, alpha, FIELD_MODULUS)
+                // negating x
+                x := sub(FIELD_MODULUS, x)
+                x := addmod(x, HASH_CONST_1, FIELD_MODULUS)
+
+                let x_three := mulmod(x, x, FIELD_MODULUS)
+                x_three := mulmod(x_three, x, FIELD_MODULUS)
+                x_three := addmod(x_three, 3, FIELD_MODULUS)
+                mstore(add(ptr, 0x80), P_PLUS1_OVER4)
+                mstore(add(ptr, 0x60), x_three)
+                if iszero(staticcall(gas(), 0x05, ptr, 0xc0, fp, 0x20)) {
+                    mstore(0, "exp mod failed at 2")
+                    revert(0, 0x20)
+                }
+
+                let ymul := 1
+                if gt(t, P_MINUS1_OVER2) {
+                    ymul := P_MINUS1
+                }
+                let y := mulmod(mload(fp), ymul, FIELD_MODULUS)
+                let y_two := mulmod(y, y, FIELD_MODULUS)
+                if eq(x_three, y_two) {
+                    mstore(output, x)
+                    mstore(add(output, 0x20), y)
+                    leave
+                }
+                x := addmod(x, 1, FIELD_MODULUS)
+                x := sub(FIELD_MODULUS, x)
+                x_three := mulmod(x, x, FIELD_MODULUS)
+                x_three := mulmod(x_three, x, FIELD_MODULUS)
+                x_three := addmod(x_three, 3, FIELD_MODULUS)
+                mstore(add(ptr, 0x60), x_three)
+                if iszero(staticcall(gas(), 0x05, ptr, 0xc0, fp, 0x20)) {
+                    mstore(0, "exp mod failed at 3")
+                    revert(0, 0x20)
+                }
+                y := mulmod(mload(fp), ymul, FIELD_MODULUS)
+                y_two := mulmod(y, y, FIELD_MODULUS)
+                if eq(x_three, y_two) {
+                    mstore(output, x)
+                    mstore(add(output, 0x20), y)
+                    leave
+                }
+                ap1 := addmod(mulmod(t, t, FIELD_MODULUS), 4, FIELD_MODULUS)
+                x := mulmod(ap1, ap1, FIELD_MODULUS)
+                x := mulmod(x, ap1, FIELD_MODULUS)
+                x := mulmod(x, HASH_CONST_3, FIELD_MODULUS)
+                x := mulmod(x, alpha, FIELD_MODULUS)
+                x := sub(FIELD_MODULUS, x)
+                x := addmod(x, 1, FIELD_MODULUS)
+                x_three := mulmod(x, x, FIELD_MODULUS)
+                x_three := mulmod(x_three, x, FIELD_MODULUS)
+                x_three := addmod(x_three, 3, FIELD_MODULUS)
+                mstore(add(ptr, 0x60), x_three)
+                if iszero(staticcall(gas(), 0x05, ptr, 0xc0, fp, 0x20)) {
+                    mstore(0, "exp mod failed at 4")
+                    revert(0, 0x20)
+                }
+                y := mulmod(mload(fp), ymul, FIELD_MODULUS)
+                mstore(output, x)
+                mstore(add(output, 0x20), y)
+            }
+
+            function hashToG1(ptr, messageptr, messagesize, output) {
+                let size := add(messagesize, 1)
+                memCopy(add(ptr, 1), messageptr, messagesize)
+                mstore8(ptr, 0x00)
+                let h0 := keccak256(ptr, size)
+                mstore8(ptr, 0x01)
+                let h1 := keccak256(ptr, size)
+                mstore8(ptr, 0x02)
+                let h2 := keccak256(ptr, size)
+                mstore8(ptr, 0x03)
+                let h3 := keccak256(ptr, size)
+                mstore(ptr, 0x20)
+                mstore(add(ptr, 0x20), 0x20)
+                mstore(add(ptr, 0x40), 0x20)
+                mstore(add(ptr, 0xa0), FIELD_MODULUS)
+                h1 := addmod(h1, mulmod(h0, TWO_256_MOD_P, FIELD_MODULUS), FIELD_MODULUS)
+                h2 := addmod(h3, mulmod(h2, TWO_256_MOD_P, FIELD_MODULUS), FIELD_MODULUS)
+                baseToG1(ptr, h1, output)
+                let x1 := mload(output)
+                let y1 := mload(add(output, 0x20))
+                let success := bn128IsOnCurve(x1, y1)
+                if iszero(success) {
+                    mstore(0, "x1 y1 not in curve")
+                    revert(0, 0x20)
+                }
+                baseToG1(ptr, h2, output)
+                let x2 := mload(output)
+                let y2 := mload(add(output, 0x20))
+                success := bn128IsOnCurve(x2, y2)
+                if iszero(success) {
+                    mstore(0, "x2 y2 not in curve")
+                    revert(0, 0x20)
+                }
+                mstore(ptr, x1)
+                mstore(add(ptr, 0x20), y1)
+                mstore(add(ptr, 0x40), x2)
+                mstore(add(ptr, 0x60), y2)
+                if iszero(staticcall(gas(), 0x06, ptr, 128, ptr, 64)) {
+                    mstore(0, "bn256 add failed")
+                    revert(0, 0x20)
+                }
+                let x := mload(ptr)
+                let y := mload(add(ptr, 0x20))
+                success := bn128IsOnCurve(x, y)
+                if iszero(success) {
+                    mstore(0, "x2 y2 not in curve")
+                    revert(0, 0x20)
+                }
+                if or(iszero(x), eq(y, 1)) {
+                    mstore(0, "point not safe to sign")
+                    revert(0, 0x20)
+                }
+                mstore(output, x)
+                mstore(add(output, 0x20), y)
+            }
+
+            let messageptr := add(message, 0x20)
+            let messagesize := mload(message)
+            let h := mload(0x40)
+            mstore(0x40, add(h, 0x40))
+            let ptr := mload(0x40)
+            hashToG1(ptr, messageptr, messagesize, h)
+            mstore(ptr, mload(sig))
+            mstore(add(ptr, 0x20), mload(add(sig, 0x20)))
+            mstore(add(ptr, 0x40), H2_XI)
+            mstore(add(ptr, 0x60), H2_X)
+            mstore(add(ptr, 0x80), H2_YI)
+            mstore(add(ptr, 0xa0), H2_Y)
+            mstore(add(ptr, 0xc0), mload(h))
+            mstore(add(ptr, 0xe0), mload(add(h, 0x20)))
+            mstore(add(ptr, 0x100), mload(pubK))
+            mstore(add(ptr, 0x120), mload(add(pubK, 0x20)))
+            mstore(add(ptr, 0x140), mload(add(pubK, 0x40)))
+            mstore(add(ptr, 0x160), mload(add(pubK, 0x60)))
+            v := bn128CheckPairing(ptr)
+        }
+    }
+
     // HashToG1 takes byte slice message and outputs an element of G1.
     // This function is based on the Fouque and Tibouchi 2012 paper
     // ``Indifferentiable Hashing to Barreto--Naehrig Curves''.
@@ -327,6 +594,385 @@ library CryptoLibrary {
         h = bn128Add([h0[0], h0[1], h1[0], h1[1]]);
         require(bn128IsOnCurve(h), "Invalid hash point: not on elliptic curve");
         require(safeSigningPoint(h), "Dangerous hash point: not safe for signing");
+    }
+
+    /// HashToG1 takes byte slice message and outputs an element of G1. Optimized version of `hashToG1`
+    /// written in EVM assembly.
+    function hashToG1ASM(bytes memory message) internal view returns (uint256[2] memory h) {
+        assembly {
+            function memCopy(dest, src, len) {
+                if lt(len, 32) {
+                    mstore(0, "invalid len")
+                    revert(0, 32)
+                }
+                // Copy word-length chunks while possible
+                for {
+
+                } gt(len, 31) {
+                    len := sub(len, 32)
+                } {
+                    mstore(dest, mload(src))
+                    src := add(src, 32)
+                    dest := add(dest, 32)
+                }
+
+                if iszero(eq(len, 0)) {
+                    // Copy remaining bytes
+                    let mask := sub(exp(256, sub(32, len)), 1)
+                    // e.g len = 4, yields
+                    // mask    = 00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+                    // notMask = ffffffff00000000000000000000000000000000000000000000000000000000
+                    let srcpart := and(mload(src), not(mask))
+                    let destpart := and(mload(dest), mask)
+                    mstore(dest, or(destpart, srcpart))
+                }
+            }
+
+            function bn128CheckPairing(ptr, paramPtr, x, y) -> result {
+                mstore(add(ptr, 0xb0), x)
+                mstore(add(ptr, 0xc0), y)
+                memCopy(ptr, paramPtr, 0xb0)
+                let success := staticcall(gas(), 0x08, ptr, 384, ptr, 32)
+                if iszero(success) {
+                    revert(0, 0)
+                }
+                result := mload(ptr)
+            }
+
+            function bn128IsOnCurve(p0, p1) -> result {
+                let o1 := mulmod(p0, p0, FIELD_MODULUS)
+                o1 := mulmod(p0, o1, FIELD_MODULUS)
+                o1 := addmod(o1, 3, FIELD_MODULUS)
+                let o2 := mulmod(p1, p1, FIELD_MODULUS)
+                result := eq(o1, o2)
+            }
+
+            function baseToG1(ptr, t, output) {
+                let fp := add(ptr, 0xc0)
+                let ap1 := mulmod(t, t, FIELD_MODULUS)
+
+                let alpha := mulmod(ap1, addmod(ap1, HASH_CONST_4, FIELD_MODULUS), FIELD_MODULUS)
+                // invert alpha
+                mstore(add(ptr, 0x60), alpha)
+                mstore(add(ptr, 0x80), P_MINUS2)
+                if iszero(staticcall(gas(), 0x05, ptr, 0xc0, fp, 0x20)) {
+                    mstore(0, "exp mod failed at 1")
+                    revert(0, 0x20)
+                }
+                alpha := mload(fp)
+
+                ap1 := mulmod(ap1, ap1, FIELD_MODULUS)
+
+                let x := mulmod(ap1, HASH_CONST_2, FIELD_MODULUS)
+                x := mulmod(x, alpha, FIELD_MODULUS)
+                // negating x
+                x := sub(FIELD_MODULUS, x)
+                x := addmod(x, HASH_CONST_1, FIELD_MODULUS)
+
+                let x_three := mulmod(x, x, FIELD_MODULUS)
+                x_three := mulmod(x_three, x, FIELD_MODULUS)
+                x_three := addmod(x_three, 3, FIELD_MODULUS)
+                mstore(add(ptr, 0x80), P_PLUS1_OVER4)
+                mstore(add(ptr, 0x60), x_three)
+                if iszero(staticcall(gas(), 0x05, ptr, 0xc0, fp, 0x20)) {
+                    mstore(0, "exp mod failed at 2")
+                    revert(0, 0x20)
+                }
+
+                let ymul := 1
+                if gt(t, P_MINUS1_OVER2) {
+                    ymul := P_MINUS1
+                }
+                let y := mulmod(mload(fp), ymul, FIELD_MODULUS)
+                let y_two := mulmod(y, y, FIELD_MODULUS)
+                if eq(x_three, y_two) {
+                    mstore(output, x)
+                    mstore(add(output, 0x20), y)
+                    leave
+                }
+                x := addmod(x, 1, FIELD_MODULUS)
+                x := sub(FIELD_MODULUS, x)
+                x_three := mulmod(x, x, FIELD_MODULUS)
+                x_three := mulmod(x_three, x, FIELD_MODULUS)
+                x_three := addmod(x_three, 3, FIELD_MODULUS)
+                mstore(add(ptr, 0x60), x_three)
+                if iszero(staticcall(gas(), 0x05, ptr, 0xc0, fp, 0x20)) {
+                    mstore(0, "exp mod failed at 3")
+                    revert(0, 0x20)
+                }
+                y := mulmod(mload(fp), ymul, FIELD_MODULUS)
+                y_two := mulmod(y, y, FIELD_MODULUS)
+                if eq(x_three, y_two) {
+                    mstore(output, x)
+                    mstore(add(output, 0x20), y)
+                    leave
+                }
+                ap1 := addmod(mulmod(t, t, FIELD_MODULUS), 4, FIELD_MODULUS)
+                x := mulmod(ap1, ap1, FIELD_MODULUS)
+                x := mulmod(x, ap1, FIELD_MODULUS)
+                x := mulmod(x, HASH_CONST_3, FIELD_MODULUS)
+                x := mulmod(x, alpha, FIELD_MODULUS)
+                x := sub(FIELD_MODULUS, x)
+                x := addmod(x, 1, FIELD_MODULUS)
+                x_three := mulmod(x, x, FIELD_MODULUS)
+                x_three := mulmod(x_three, x, FIELD_MODULUS)
+                x_three := addmod(x_three, 3, FIELD_MODULUS)
+                mstore(add(ptr, 0x60), x_three)
+                if iszero(staticcall(gas(), 0x05, ptr, 0xc0, fp, 0x20)) {
+                    mstore(0, "exp mod failed at 4")
+                    revert(0, 0x20)
+                }
+                y := mulmod(mload(fp), ymul, FIELD_MODULUS)
+                mstore(output, x)
+                mstore(add(output, 0x20), y)
+            }
+
+            function hashToG1(ptr, messageptr, messagesize, output) {
+                let size := add(messagesize, 1)
+                memCopy(add(ptr, 1), messageptr, messagesize)
+                mstore8(ptr, 0x00)
+                let h0 := keccak256(ptr, size)
+                mstore8(ptr, 0x01)
+                let h1 := keccak256(ptr, size)
+                mstore8(ptr, 0x02)
+                let h2 := keccak256(ptr, size)
+                mstore8(ptr, 0x03)
+                let h3 := keccak256(ptr, size)
+                mstore(ptr, 0x20)
+                mstore(add(ptr, 0x20), 0x20)
+                mstore(add(ptr, 0x40), 0x20)
+                mstore(add(ptr, 0xa0), FIELD_MODULUS)
+                h1 := addmod(h1, mulmod(h0, TWO_256_MOD_P, FIELD_MODULUS), FIELD_MODULUS)
+                h2 := addmod(h3, mulmod(h2, TWO_256_MOD_P, FIELD_MODULUS), FIELD_MODULUS)
+                baseToG1(ptr, h1, output)
+                let x1 := mload(output)
+                let y1 := mload(add(output, 0x20))
+                let success := bn128IsOnCurve(x1, y1)
+                if iszero(success) {
+                    mstore(0, "x1 y1 not in curve")
+                    revert(0, 0x20)
+                }
+                baseToG1(ptr, h2, output)
+                let x2 := mload(output)
+                let y2 := mload(add(output, 0x20))
+                success := bn128IsOnCurve(x2, y2)
+                if iszero(success) {
+                    mstore(0, "x2 y2 not in curve")
+                    revert(0, 0x20)
+                }
+                mstore(ptr, x1)
+                mstore(add(ptr, 0x20), y1)
+                mstore(add(ptr, 0x40), x2)
+                mstore(add(ptr, 0x60), y2)
+                if iszero(staticcall(gas(), 0x06, ptr, 128, ptr, 64)) {
+                    mstore(0, "bn256 add failed")
+                    revert(0, 0x20)
+                }
+                let x := mload(ptr)
+                let y := mload(add(ptr, 0x20))
+                success := bn128IsOnCurve(x, y)
+                if iszero(success) {
+                    mstore(0, "x2 y2 not in curve")
+                    revert(0, 0x20)
+                }
+                if or(iszero(x), eq(y, 1)) {
+                    mstore(0, "point not safe to sign")
+                    revert(0, 0x20)
+                }
+                mstore(output, x)
+                mstore(add(output, 0x20), y)
+            }
+
+            let messageptr := add(message, 0x20)
+            let messagesize := mload(message)
+            let ptr := mload(0x40)
+            hashToG1(ptr, messageptr, messagesize, h)
+        }
+    }
+
+    function hashToG1ASM2(bytes memory message) internal view returns (uint256[2] memory h) {
+        assembly {
+            function memCopy(dest, src, len) {
+                if lt(len, 32) {
+                    mstore(0, "invalid len")
+                    revert(0, 32)
+                }
+                // Copy word-length chunks while possible
+                for {
+
+                } gt(len, 31) {
+                    len := sub(len, 32)
+                } {
+                    mstore(dest, mload(src))
+                    src := add(src, 32)
+                    dest := add(dest, 32)
+                }
+
+                if iszero(eq(len, 0)) {
+                    // Copy remaining bytes
+                    let mask := sub(exp(256, sub(32, len)), 1)
+                    // e.g len = 4, yields
+                    // mask    = 00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+                    // notMask = ffffffff00000000000000000000000000000000000000000000000000000000
+                    let srcpart := and(mload(src), not(mask))
+                    let destpart := and(mload(dest), mask)
+                    mstore(dest, or(destpart, srcpart))
+                }
+            }
+
+            function bn128IsOnCurve(p0, p1) -> result {
+                let o1 := mulmod(p0, p0, FIELD_MODULUS)
+                o1 := mulmod(p0, o1, FIELD_MODULUS)
+                o1 := addmod(o1, 3, FIELD_MODULUS)
+                let o2 := mulmod(p1, p1, FIELD_MODULUS)
+                result := eq(o1, o2)
+            }
+
+            function baseToG1(ptr, t, output) {
+                let fp := add(ptr, 0xc0)
+                let ap1 := mulmod(t, t, FIELD_MODULUS)
+
+                let alpha := mulmod(ap1, addmod(ap1, HASH_CONST_4, FIELD_MODULUS), FIELD_MODULUS)
+
+                mstore(add(ptr, 0x60), alpha)
+                mstore(add(ptr, 0x80), P_MINUS2)
+                if iszero(staticcall(gas(), 0x05, ptr, 0xc0, fp, 0x20)) {
+                    mstore(0, "exp mod failed at 1")
+                    revert(0, 0x20)
+                }
+                alpha := mload(fp)
+                ap1 := mulmod(ap1, ap1, FIELD_MODULUS)
+                let x := mulmod(ap1, HASH_CONST_2, FIELD_MODULUS)
+                x := mulmod(x, alpha, FIELD_MODULUS)
+                x := sub(FIELD_MODULUS, x)
+                x := addmod(x, HASH_CONST_1, FIELD_MODULUS)
+                let x_three := mulmod(x, x, FIELD_MODULUS)
+                x_three := mulmod(x_three, x, FIELD_MODULUS)
+                x_three := addmod(x_three, 3, FIELD_MODULUS)
+                mstore(add(ptr, 0x60), x_three)
+                mstore(add(ptr, 0x80), P_MINUS1_OVER2)
+                if iszero(staticcall(gas(), 0x05, ptr, 0xc0, fp, 0x20)) {
+                    mstore(0, "exp mod failed at 2")
+                    revert(0, 0x20)
+                }
+                if iszero(eq(mload(fp), 1)) {
+                    x := addmod(x, 1, FIELD_MODULUS)
+                    x := sub(FIELD_MODULUS, x)
+                    x_three := mulmod(x, x, FIELD_MODULUS)
+                    x_three := mulmod(x_three, x, FIELD_MODULUS)
+                    x_three := addmod(x_three, 3, FIELD_MODULUS)
+                    mstore(add(ptr, 0x60), x_three)
+                    if iszero(staticcall(gas(), 0x05, ptr, 0xc0, fp, 0x20)) {
+                        mstore(0, "exp mod failed at 1")
+                        revert(0, 0x20)
+                    }
+                    if iszero(eq(mload(fp), 1)) {
+                        let ap2 := addmod(ap1, 4, FIELD_MODULUS)
+                        x := mulmod(ap2, ap2, FIELD_MODULUS)
+                        x := mulmod(x, ap2, FIELD_MODULUS)
+                        x := mulmod(x, HASH_CONST_3, FIELD_MODULUS)
+                        x := mulmod(x, alpha, FIELD_MODULUS)
+                        x := sub(FIELD_MODULUS, x)
+                        x := addmod(x, 1, FIELD_MODULUS)
+                        x_three := mulmod(x, x, FIELD_MODULUS)
+                        x_three := mulmod(x_three, x, FIELD_MODULUS)
+                        x_three := addmod(x_three, 3, FIELD_MODULUS)
+                    }
+                }
+                mstore(add(ptr, 0x60), x_three)
+                mstore(add(ptr, 0x80), P_PLUS1_OVER4)
+                if iszero(staticcall(gas(), 0x05, ptr, 0xc0, fp, 0x20)) {
+                    mstore(0, "exp mod failed at 1")
+                    revert(0, 0x20)
+                }
+                let y := mload(fp)
+                if gt(t, P_MINUS1_OVER2) {
+                    y := mulmod(y, P_MINUS1, FIELD_MODULUS)
+                }
+                mstore(output, x)
+                mstore(add(output, 0x20), y)
+            }
+
+            function hashToG1(ptr, messageptr, messagesize, output) {
+                let size := add(messagesize, 1)
+                memCopy(add(ptr, 1), messageptr, messagesize)
+                mstore8(ptr, 0x00)
+                let h0 := keccak256(ptr, size)
+                mstore8(ptr, 0x01)
+                let h1 := keccak256(ptr, size)
+                mstore8(ptr, 0x02)
+                let h2 := keccak256(ptr, size)
+                mstore8(ptr, 0x03)
+                let h3 := keccak256(ptr, size)
+                mstore(ptr, 0x20)
+                mstore(add(ptr, 0x20), 0x20)
+                mstore(add(ptr, 0x40), 0x20)
+                mstore(
+                    add(ptr, 0xa0),
+                    0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47
+                )
+                h1 := addmod(
+                    h1,
+                    mulmod(
+                        h0,
+                        0xe0a77c19a07df2f666ea36f7879462c0a78eb28f5c70b3dd35d438dc58f0d9d,
+                        0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47
+                    ),
+                    0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47
+                )
+                h2 := addmod(
+                    h3,
+                    mulmod(
+                        h2,
+                        0xe0a77c19a07df2f666ea36f7879462c0a78eb28f5c70b3dd35d438dc58f0d9d,
+                        0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47
+                    ),
+                    0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47
+                )
+                baseToG1(ptr, h1, output)
+                let x1 := mload(output)
+                let y1 := mload(add(output, 0x20))
+                let success := bn128IsOnCurve(x1, y1)
+                if iszero(success) {
+                    mstore(0, "x1 y1 not in curve")
+                    revert(0, 0x20)
+                }
+                baseToG1(ptr, h2, output)
+                let x2 := mload(output)
+                let y2 := mload(add(output, 0x20))
+                success := bn128IsOnCurve(x2, y2)
+                if iszero(success) {
+                    mstore(0, "x2 y2 not in curve")
+                    revert(0, 0x20)
+                }
+                mstore(ptr, x1)
+                mstore(add(ptr, 0x20), y1)
+                mstore(add(ptr, 0x40), x2)
+                mstore(add(ptr, 0x60), y2)
+                if iszero(staticcall(gas(), 0x06, ptr, 128, ptr, 64)) {
+                    mstore(0, "bn256 add failed")
+                    revert(0, 0x20)
+                }
+                let x := mload(ptr)
+                let y := mload(add(ptr, 0x20))
+                success := bn128IsOnCurve(x, y)
+                if iszero(success) {
+                    mstore(0, "x2 y2 not in curve")
+                    revert(0, 0x20)
+                }
+                if or(iszero(x), eq(y, 1)) {
+                    mstore(0, "point not safe to sign")
+                    revert(0, 0x20)
+                }
+                mstore(output, x)
+                mstore(add(output, 0x20), y)
+            }
+
+            let messageptr := add(message, 0x20)
+            let messagesize := mload(message)
+            let ptr := mload(0x40)
+            hashToG1(ptr, messageptr, messagesize, h)
+        }
     }
 
     // baseToG1 is a deterministic map from the base field F_p to the elliptic
