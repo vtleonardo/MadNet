@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
 )
@@ -463,7 +464,7 @@ func RegisterValidators(eth *ethereum.Details, validatorAddresses []string) erro
 }
 
 // send a command to the hardhat server via an RPC call
-func SendHardhatCommand(command string, params ...interface{}) error {
+func SendHardhatCommand(command string, params ...interface{}) ([]byte, error) {
 
 	commandJson := &ethereum.JsonRPCMessage{
 		Version: "2.0",
@@ -474,7 +475,7 @@ func SendHardhatCommand(command string, params ...interface{}) error {
 
 	paramsJson, err := json.Marshal(params)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	commandJson.Params = paramsJson
@@ -483,7 +484,7 @@ func SendHardhatCommand(command string, params ...interface{}) error {
 	var buff bytes.Buffer
 	err = json.NewEncoder(&buff).Encode(commandJson)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	reader := bytes.NewReader(buff.Bytes())
@@ -495,21 +496,22 @@ func SendHardhatCommand(command string, params ...interface{}) error {
 	)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	_, err = io.ReadAll(resp.Body)
+	bodyBin, err := io.ReadAll(resp.Body)
+
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return bodyBin, nil
 }
 
 // mine a certain number of hardhat blocks
 func MineBlocks(t *testing.T, eth ethereum.Network, blocksToMine uint64) {
 	var blocksToMineString = "0x" + strconv.FormatUint(blocksToMine, 16)
 	log.Printf("hardhat_mine %v blocks ", blocksToMine)
-	err := SendHardhatCommand("hardhat_mine", blocksToMineString)
+	_, err := SendHardhatCommand("hardhat_mine", blocksToMineString)
 	if err != nil {
 		panic(err)
 	}
@@ -529,7 +531,7 @@ func AdvanceTo(t *testing.T, eth ethereum.Network, target uint64) {
 
 	log.Printf("hardhat_mine %v blocks to target height %v", blocksToMine, target)
 
-	err = SendHardhatCommand("hardhat_mine", blocksToMineString)
+	_, err = SendHardhatCommand("hardhat_mine", blocksToMineString)
 	if err != nil {
 		panic(err)
 	}
@@ -539,7 +541,7 @@ func AdvanceTo(t *testing.T, eth ethereum.Network, target uint64) {
 func SetNextBlockBaseFee(t *testing.T, eth ethereum.Network, target uint64) {
 	log.Printf("Setting hardhat_setNextBlockBaseFeePerGas to %v", target)
 
-	err := SendHardhatCommand("hardhat_setNextBlockBaseFeePerGas", "0x"+strconv.FormatUint(target, 16))
+	_, err := SendHardhatCommand("hardhat_setNextBlockBaseFeePerGas", "0x"+strconv.FormatUint(target, 16))
 	if err != nil {
 		panic(err)
 	}
@@ -549,7 +551,7 @@ func SetNextBlockBaseFee(t *testing.T, eth ethereum.Network, target uint64) {
 func SetAutoMine(t *testing.T, eth ethereum.Network, autoMine bool) {
 	log.Printf("Setting Automine to %v", autoMine)
 
-	err := SendHardhatCommand("evm_setAutomine", autoMine)
+	_, err := SendHardhatCommand("evm_setAutomine", autoMine)
 	if err != nil {
 		panic(err)
 	}
@@ -561,8 +563,57 @@ func SetAutoMine(t *testing.T, eth ethereum.Network, autoMine bool) {
 func SetBlockInterval(t *testing.T, eth ethereum.Network, intervalInMilliSeconds uint64) {
 	SetAutoMine(t, eth, false)
 	log.Printf("Setting block interval to %v seconds", intervalInMilliSeconds)
-	err := SendHardhatCommand("evm_setIntervalMining", intervalInMilliSeconds)
+	_, err := SendHardhatCommand("evm_setIntervalMining", intervalInMilliSeconds)
 	if err != nil {
 		panic(err)
 	}
+}
+
+type txExtraInfo struct {
+	BlockNumber *string         `json:"blockNumber,omitempty"`
+	BlockHash   *common.Hash    `json:"blockHash,omitempty"`
+	From        *common.Address `json:"from,omitempty"`
+}
+
+type rpcTransaction struct {
+	Tx *types.Transaction
+	txExtraInfo
+}
+
+func (tx *rpcTransaction) UnmarshalJSON(msg []byte) error {
+	if err := json.Unmarshal(msg, &tx.Tx); err != nil {
+		return err
+	}
+	return json.Unmarshal(msg, &tx.txExtraInfo)
+}
+
+type rpcBlock struct {
+	Hash         common.Hash      `json:"hash"`
+	Transactions []rpcTransaction `json:"transactions"`
+	UncleHashes  []common.Hash    `json:"uncles"`
+}
+
+// Set the interval between hardhat blocks. In case interval is 0, we enter in
+// manual mode and blocks can only be mined explicitly by calling `MineBlocks`.
+// This function disables autoMine.
+func GetPendingBlock(t *testing.T, eth ethereum.Network) []*types.Transaction {
+	SetAutoMine(t, eth, false)
+	log.Printf("Getting all transaction in the latest block")
+	resp, err := SendHardhatCommand("eth_getBlockByNumber", "pending", true)
+	if err != nil {
+		panic(err)
+	}
+	// var head *types.Header
+	var body rpcBlock
+	// if err := json.Unmarshal(raw, &head); err != nil {
+	// 	return nil, err
+	// }
+	if err := json.Unmarshal(resp, &body); err != nil {
+		panic(err)
+	}
+	var txns []*types.Transaction
+	for _, txn := range body.Transactions {
+		txns = append(txns, txn.Tx)
+	}
+	return txns
 }
