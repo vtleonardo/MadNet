@@ -82,14 +82,14 @@ func TestEthereum_HardhatNode(t *testing.T) {
 
 	t.Logf("deploy account: %v", deployAccount.Address.String())
 
-	err = testutils.StartHardHatNode(eth)
+	err, _ = testutils.StartHardHatNode(eth)
 	if err != nil {
 		t.Fatalf("error starting hardhat node: %v", err)
 	}
 
 	t.Logf("waiting on hardhat node to start...")
 
-	err = testutils.WaitForHardHatNode(ctx)
+	err = testutils.WaitHardHatNodeToStart(ctx)
 	if err != nil {
 		t.Fatalf("error: %v", err)
 	}
