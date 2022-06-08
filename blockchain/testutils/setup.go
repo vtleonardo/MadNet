@@ -6,14 +6,14 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"encoding/json"
-	"fmt"
-	"github.com/MadBase/MadNet/config"
+	"github.com/MadBase/MadNet/blockchain/transaction"
+	"github.com/MadBase/MadNet/logging"
 	"io"
 	"io/ioutil"
 	"log"
 	"math/big"
 	"net/http"
-	"os"
+	os "os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
@@ -23,8 +23,6 @@ import (
 	"time"
 
 	"github.com/MadBase/MadNet/blockchain/ethereum"
-	"github.com/MadBase/MadNet/blockchain/transaction"
-
 	"github.com/MadBase/MadNet/utils"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -38,7 +36,193 @@ var (
 	scriptRegisterValidator = "register_test"
 	scriptStartHardHatNode  = "hardhat_node"
 	scriptInit              = "init"
+	hardHatProcessId        = "HARDHAT_PROCESS_ID"
 )
+
+func getEthereumDetails() (*ethereum.Details, error) {
+	details, err := ethereum.NewEndpoint(
+		getConfigurationProperty("endpoint"),
+		"../../assets/test/keys",
+		"../../assets/test/passcodes.txt",
+		"0x546F99F244b7B58B855330AE0E2BC1b30b41302F",
+		1,
+		500,
+		0,
+	)
+	return details, err
+}
+
+func waitForHardHatNode(ctx context.Context) error {
+	c := http.Client{}
+	msg := &ethereum.JsonRPCMessage{
+		Version: "2.0",
+		ID:      []byte("1"),
+		Method:  "eth_chainId",
+		Params:  make([]byte, 0),
+	}
+
+	params, err := json.Marshal(make([]string, 0))
+	if err != nil {
+		log.Printf("could not run hardhat node: %v", err)
+		return err
+	}
+	msg.Params = params
+
+	var buff bytes.Buffer
+	err = json.NewEncoder(&buff).Encode(msg)
+	if err != nil {
+		log.Printf("Error creating a buffer json encoder: %v", err)
+		return err
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(time.Second):
+			body := bytes.NewReader(buff.Bytes())
+			_, err := c.Post(
+				getConfigurationProperty("endpoint"),
+				"application/json",
+				body,
+			)
+			if err != nil {
+				continue
+			}
+			log.Printf("HardHat node started correctly")
+			return nil
+		}
+	}
+}
+
+func isHardHatRunning() (bool, error) {
+	var client = http.Client{Timeout: 2 * time.Second}
+	resp, err := client.Head(getConfigurationProperty("endpoint"))
+	if err != nil {
+		return false, err
+	}
+	resp.Body.Close()
+
+	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func startHardHat(t *testing.T, ctx context.Context) *ethereum.Details {
+
+	log.Printf("Starting HardHat ...")
+	err := runScriptHardHatNode()
+	assert.Nilf(t, err, "Error starting hardhat node")
+
+	err = waitForHardHatNode(ctx)
+	assert.Nilf(t, err, "Failed to wait for hardhat to be up and running")
+
+	details, err := getEthereumDetails()
+	assert.Nilf(t, err, "Failed to build Ethereum endpoint")
+	assert.NotNilf(t, details, "Ethereum network should not be Nil")
+
+	log.Printf("Deploying contracts ...")
+	err = runScriptDeployContracts(details, ctx, getConfigurationProperty("factoryAddress"))
+	if err != nil {
+		details.Close()
+		assert.Nilf(t, err, "Error deploying contracts: %v")
+	}
+
+	log.Printf("Registering validators ...")
+	validatorAddresses := make([]string, 0)
+	knownAccounts := details.GetKnownAccounts()
+	for _, acct := range knownAccounts {
+		validatorAddresses = append(validatorAddresses, acct.Address.String())
+	}
+	err = runScriptRegisterValidators(details, validatorAddresses)
+	if err != nil {
+		details.Close()
+		assert.Nilf(t, err, "Error registering validators: %v")
+	}
+	logger := logging.GetLogger("test").WithField("test", 0)
+
+	log.Printf("Funding accounts ...")
+	for _, account := range knownAccounts[1:] {
+		watcher := transaction.WatcherFromNetwork(details)
+		watcher.StartLoop()
+
+		txn, err := ethereum.TransferEther(details, logger, details.GetDefaultAccount().Address, account.Address, big.NewInt(100000000000000000))
+		assert.Nilf(t, err, "Error in TrasferEther transaction")
+		assert.NotNilf(t, txn, "Expected transaction not to be nil")
+	}
+	return details
+}
+
+func stopHardHat() error {
+	log.Printf("Stopping HardHat running instance ...")
+	isRunning, _ := isHardHatRunning()
+	if !isRunning {
+		return nil
+	}
+
+	pid, _ := strconv.Atoi(os.Getenv(hardHatProcessId))
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		log.Printf("Error finding HardHat pid: %v", err)
+		return err
+	}
+
+	err = process.Signal(syscall.SIGTERM)
+	if err != nil {
+		log.Printf("Error waiting sending SIGTERM signal to HardHat process: %v", err)
+		return err
+	}
+
+	_, err = process.Wait()
+	if err != nil {
+		log.Printf("Error waiting HardHat process to stop: %v", err)
+		return err
+	}
+
+	log.Printf("HardHat node has been stopped")
+	return nil
+}
+
+func GetEthereumNetwork(t *testing.T, cleanStart bool) ethereum.Network {
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	isRunning, _ := isHardHatRunning()
+	if !isRunning {
+		log.Printf("Hardhat is not running. Start new HardHat")
+		details := startHardHat(t, ctx)
+		assert.NotNilf(t, details, "Expected details to be not nil")
+		return details
+	}
+
+	if cleanStart {
+		err := stopHardHat()
+		assert.Nilf(t, err, "Failed to stopHardHat")
+
+		details := startHardHat(t, ctx)
+		assert.NotNilf(t, details, "Expected details to be not nil")
+		return details
+	}
+
+	network, err := getEthereumDetails()
+	assert.Nilf(t, err, "Failed to build Ethereum endpoint")
+	assert.NotNilf(t, network, "Ethereum network should not be Nil")
+
+	return network
+}
+
+// ========================================================
+// ========================================================
+// ========================================================
+// ========================================================
+// ========================================================
+// ========================================================
+// ========================================================
+// ========================================================
+// ========================================================
 
 // SetupPrivateKeys computes deterministic private keys for testing
 func SetupPrivateKeys(n int) []*ecdsa.PrivateKey {
@@ -169,73 +353,6 @@ func GetOwnerAccount() (*common.Address, *ecdsa.PrivateKey, error) {
 	return &key.Address, key.PrivateKey, nil
 }
 
-func ConnectSimulatorEndpoint(t *testing.T, cleanStart bool) ethereum.Network {
-
-	details, err := ethereum.NewEndpoint(
-		getConfigurationProperty("endpoint"),
-		"../../assets/test/keys",
-		"../../assets/test/passcodes.txt",
-		"0x546F99F244b7B58B855330AE0E2BC1b30b41302F",
-		1,
-		500,
-	)
-	assert.Nilf(t, err, "Failed to build Ethereum endpoint...")
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	isRunning, err := isHardHatRunning()
-	if err != nil {
-		return nil
-	}
-
-	if !isRunning || (isRunning && cleanStart) {
-		err = startHardHatNode(details)
-		if err != nil {
-			details.Close()
-			assert.Nilf(t, err, "Error starting HardHat node.")
-		}
-
-		err = waitForHardHatNode(ctx)
-		if err != nil {
-			details.Close()
-			assert.Nilf(t, err, "Error waiting for HardHat node to start")
-		}
-
-		err = deployContracts(details, ctx, config.Configuration.Ethereum.FactoryAddress)
-		if err != nil {
-			details.Close()
-			assert.Nilf(t, err, "Error deploying contracts: %v")
-		}
-
-		validatorAddresses := make([]string, 0)
-		for _, acct := range details.GetKnownAccounts() {
-			validatorAddresses = append(validatorAddresses, acct.Address.String())
-		}
-		err = registerValidators(details, validatorAddresses)
-		if err != nil {
-			details.Close()
-			assert.Nilf(t, err, "Error registering validators: %v")
-		}
-
-		// Fund accounts
-		for _, account := range details.GetKnownAccounts()[1:] {
-			txn, err := details.TransferEther(details.GetDefaultAccount().Address, account.Address, big.NewInt(100000000000000000))
-			assert.Nilf(t, err, "Error in TrasferEther transaction")
-			assert.NotNilf(t, txn, "Expected transaction not to be nil")
-
-			watcher := transaction.NewWatcher(details, transaction.NewKnownSelectors(), details.GetFinalityDelay())
-			watcher.StartLoop()
-
-			rcpt, err := watcher.SubscribeAndWait(ctx, txn)
-			assert.Nilf(t, err, "Error SubscribeAndWait watcher")
-			assert.NotNilf(t, rcpt, "Receipt expected to be not nil")
-		}
-	}
-
-	return details
-}
-
 //func Setup(finalityDelay uint64, numAccounts int, registryAddress common.Address) (ethereum.Network, *logrus.Logger, error) {
 //	logger := logging.GetLogger("test")
 //	logger.SetLevel(logrus.TraceLevel)
@@ -266,7 +383,7 @@ func ConnectSimulatorEndpoint(t *testing.T, cleanStart bool) ethereum.Network {
 //	return eth, logger, nil
 //}
 
-func startHardHatNode(details *ethereum.Details) error {
+func runScriptHardHatNode() error {
 
 	rootPath := getProjectRootPath()
 	scriptPath := getMainScriptPath()
@@ -284,31 +401,16 @@ func startHardHatNode(details *ethereum.Details) error {
 		return err
 	}
 
-	details.GetInternalClient().Close()
+	err = os.Setenv(hardHatProcessId, strconv.Itoa(cmd.Process.Pid))
+	if err != nil {
+		log.Printf("Error setting environment variable: %v", err)
+		return err
+	}
 
 	return nil
 }
 
-func StopHardHatNode(cmd exec.Cmd) error {
-
-	fmt.Printf("closing hardhat node %v..\n", cmd.Process.Pid)
-	err := cmd.Process.Signal(syscall.SIGTERM)
-	if err != nil {
-		log.Printf("Error waiting sending SIGTERM signal to HardHat process: %v", err)
-		return err
-	}
-
-	_, err = cmd.Process.Wait()
-	if err != nil {
-		log.Printf("Error waiting HardHat process to stop: %v", err)
-		return err
-	}
-
-	fmt.Printf("hardhat node closed\n")
-	return nil
-}
-
-func InitializeValidatorFiles(n int) error {
+func RunScriptInitializeValidator(n int) error {
 
 	rootPath := getProjectRootPath()
 	scriptPath := getMainScriptPath()
@@ -329,7 +431,7 @@ func InitializeValidatorFiles(n int) error {
 	return nil
 }
 
-func deployContracts(eth *ethereum.Details, ctx context.Context, factoryAddress string) error {
+func runScriptDeployContracts(eth *ethereum.Details, ctx context.Context, factoryAddress string) error {
 
 	rootPath := getProjectRootPath()
 	scriptPath := getMainScriptPath()
@@ -360,65 +462,7 @@ func deployContracts(eth *ethereum.Details, ctx context.Context, factoryAddress 
 	return nil
 }
 
-func waitForHardHatNode(ctx context.Context) error {
-	c := http.Client{}
-	msg := &ethereum.JsonRPCMessage{
-		Version: "2.0",
-		ID:      []byte("1"),
-		Method:  "eth_chainId",
-		Params:  make([]byte, 0),
-	}
-
-	params, err := json.Marshal(make([]string, 0))
-	if err != nil {
-		log.Printf("could not run hardhat node: %v", err)
-		return err
-	}
-	msg.Params = params
-
-	var buff bytes.Buffer
-	err = json.NewEncoder(&buff).Encode(msg)
-	if err != nil {
-		log.Printf("Error creating a buffer json encoder: %v", err)
-		return err
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(time.Second):
-			body := bytes.NewReader(buff.Bytes())
-			_, err := c.Post(
-				config.Configuration.Ethereum.Endpoint,
-				"application/json",
-				body,
-			)
-			if err != nil {
-				continue
-			}
-			log.Printf("HardHat node started correctly")
-			return nil
-		}
-	}
-}
-
-func isHardHatRunning() (bool, error) {
-	var client = http.Client{Timeout: 2 * time.Second}
-	resp, err := client.Head(config.Configuration.Ethereum.Endpoint)
-	if err != nil {
-		return false, err
-	}
-	resp.Body.Close()
-
-	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
-		return true, nil
-	}
-
-	return false, nil
-}
-
-func registerValidators(eth *ethereum.Details, validatorAddresses []string) error {
+func runScriptRegisterValidators(eth *ethereum.Details, validatorAddresses []string) error {
 
 	rootPath := getProjectRootPath()
 	scriptPath := getMainScriptPath()

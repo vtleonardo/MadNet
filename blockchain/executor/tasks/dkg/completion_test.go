@@ -4,14 +4,12 @@ package dkg_test
 
 import (
 	"context"
-	"testing"
-	"time"
-
 	"github.com/MadBase/MadNet/blockchain/executor/tasks/dkg"
 	"github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/state"
 	dkgTestUtils "github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/testutils"
 	"github.com/MadBase/MadNet/blockchain/monitor/events"
 	"github.com/MadBase/MadNet/blockchain/testutils"
+	"testing"
 
 	"github.com/MadBase/MadNet/logging"
 	"github.com/sirupsen/logrus"
@@ -22,7 +20,7 @@ import (
 func TestCompletion_Group_1_AllGood(t *testing.T) {
 	n := 4
 
-	err := testutils.InitializeValidatorFiles(5)
+	err := testutils.RunScriptInitializeValidator(5)
 	assert.Nil(t, err)
 
 	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100)
@@ -40,7 +38,6 @@ func TestCompletion_Group_1_AllGood(t *testing.T) {
 		err = suite.GpkjSubmissionTasks[idx].DoWork(ctx, logger, eth)
 		assert.Nil(t, err)
 
-		eth.Commit()
 		assert.True(t, suite.GpkjSubmissionTasks[idx].Success)
 	}
 
@@ -106,7 +103,6 @@ func TestCompletion_Group_1_StartFromCompletion(t *testing.T) {
 		if amILeading {
 			hasLeader = true
 			err = task.DoWork(ctx, logger, eth)
-			eth.Commit()
 			assert.Nil(t, err)
 			assert.False(t, task.ShouldRetry(ctx, logger, eth))
 			assert.True(t, task.Success)
@@ -135,11 +131,9 @@ func TestCompletion_Group_1_StartFromCompletion(t *testing.T) {
 // This test is meant to raise an error resulting from an invalid argument
 // for the Ethereum interface.
 func TestCompletion_Group_2_Bad1(t *testing.T) {
-	n := 4
-	ecdsaPrivateKeys, _ := testutils.InitializePrivateKeysAndAccounts(n)
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.ConnectSimulatorEndpoint(t, ecdsaPrivateKeys, 333*time.Millisecond)
+	eth := testutils.GetEthereumNetwork(t, false)
 	defer eth.Close()
 
 	acct := eth.GetKnownAccounts()[0]
@@ -158,11 +152,9 @@ func TestCompletion_Group_2_Bad1(t *testing.T) {
 
 // We test to ensure that everything behaves correctly.
 func TestCompletion_Group_2_Bad2(t *testing.T) {
-	n := 4
-	ecdsaPrivateKeys, _ := testutils.InitializePrivateKeysAndAccounts(n)
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.ConnectSimulatorEndpoint(t, ecdsaPrivateKeys, 333*time.Millisecond)
+	eth := testutils.GetEthereumNetwork(t, false)
 	defer eth.Close()
 
 	acct := eth.GetKnownAccounts()[0]
@@ -200,7 +192,6 @@ func TestCompletion_Group_2_Bad3(t *testing.T) {
 		err = tasksVec[idx].DoWork(ctx, logger, eth)
 		assert.Nil(t, err)
 
-		eth.Commit()
 		assert.True(t, tasksVec[idx].Success)
 	}
 
@@ -221,7 +212,6 @@ func TestCompletion_Group_2_Bad3(t *testing.T) {
 
 	// Advance to end of Completion phase
 	testutils.AdvanceTo(t, eth, completionEnd)
-	eth.Commit()
 
 	err = completionTasks[0].Initialize(ctx, logger, eth)
 	if err != nil {
@@ -286,7 +276,6 @@ func TestCompletion_Group_3_ShouldRetry_returnsTrue(t *testing.T) {
 		err = suite.GpkjSubmissionTasks[idx].DoWork(ctx, logger, eth)
 		assert.Nil(t, err)
 
-		eth.Commit()
 		assert.True(t, suite.GpkjSubmissionTasks[idx].Success)
 	}
 
@@ -306,7 +295,6 @@ func TestCompletion_Group_3_ShouldRetry_returnsTrue(t *testing.T) {
 
 	// Advance to Completion phase
 	testutils.AdvanceTo(t, eth, completionStart)
-	eth.Commit()
 
 	err = completionTasks[0].Initialize(ctx, logger, eth)
 	assert.Nil(t, err)

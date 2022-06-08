@@ -65,7 +65,7 @@ func TestGPKjSubmission_Group_1_Bad1(t *testing.T) {
 	ecdsaPrivateKeys, _ := testutils.InitializePrivateKeysAndAccounts(n)
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.ConnectSimulatorEndpoint(t, ecdsaPrivateKeys, 333*time.Millisecond)
+	eth := testutils.GetEthereumNetwork(t, ecdsaPrivateKeys, 333*time.Millisecond)
 	defer eth.Close()
 
 	acct := eth.GetKnownAccounts()[0]
@@ -91,7 +91,7 @@ func TestGPKjSubmission_Group_1_Bad2(t *testing.T) {
 	ecdsaPrivateKeys, _ := testutils.InitializePrivateKeysAndAccounts(n)
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.ConnectSimulatorEndpoint(t, ecdsaPrivateKeys, 333*time.Millisecond)
+	eth := testutils.GetEthereumNetwork(t, ecdsaPrivateKeys, 333*time.Millisecond)
 	defer eth.Close()
 
 	acct := eth.GetKnownAccounts()[0]

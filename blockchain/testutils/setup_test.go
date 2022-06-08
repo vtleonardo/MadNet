@@ -15,14 +15,14 @@ func TestConnectSimulatorEndpoint(t *testing.T) {
 	}{
 		{
 			name:       "HardHat not running",
-			cleanStart: false,
+			cleanStart: true,
 			want:       nil,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := ConnectSimulatorEndpoint(t, tt.cleanStart); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ConnectSimulatorEndpoint() = %v, want %v", got, tt.want)
+			if got := GetEthereumNetwork(t, tt.cleanStart); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetEthereumNetwork() = %v, want %v", got, tt.want)
 			}
 		})
 	}

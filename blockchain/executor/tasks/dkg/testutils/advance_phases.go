@@ -116,7 +116,7 @@ func InitializeETHDKG(eth ethereum.Network, callOpts *bind.TransactOpts, ctx con
 func StartFromRegistrationOpenPhase(t *testing.T, n int, unregisteredValidators int, phaseLength uint16) *TestSuite {
 	ecdsaPrivateKeys, accounts := testutils.InitializePrivateKeysAndAccounts(n)
 
-	eth := testutils.ConnectSimulatorEndpoint(t, ecdsaPrivateKeys, 1000*time.Millisecond)
+	eth := testutils.GetEthereumNetwork(t, ecdsaPrivateKeys, 1000*time.Millisecond)
 	assert.NotNil(t, eth)
 
 	ctx := context.Background()

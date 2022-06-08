@@ -296,7 +296,7 @@ func TestShareDistribution_Group_2_Bad6(t *testing.T) {
 	ecdsaPrivateKeys, _ := testutils.InitializePrivateKeysAndAccounts(n)
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.ConnectSimulatorEndpoint(t, ecdsaPrivateKeys, 333*time.Millisecond)
+	eth := testutils.GetEthereumNetwork(t, ecdsaPrivateKeys, 333*time.Millisecond)
 	defer eth.Close()
 
 	acct := eth.GetKnownAccounts()[0]
@@ -320,7 +320,7 @@ func TestShareDistribution_Group_3_Bad7(t *testing.T) {
 	ecdsaPrivateKeys, _ := testutils.InitializePrivateKeysAndAccounts(n)
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.ConnectSimulatorEndpoint(t, ecdsaPrivateKeys, 333*time.Millisecond)
+	eth := testutils.GetEthereumNetwork(t, ecdsaPrivateKeys, 333*time.Millisecond)
 	defer eth.Close()
 
 	acct := eth.GetKnownAccounts()[0]
