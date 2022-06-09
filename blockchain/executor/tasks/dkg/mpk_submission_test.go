@@ -4,14 +4,12 @@ package dkg_test
 
 import (
 	"context"
-	"math/big"
-	"testing"
-	"time"
-
 	"github.com/MadBase/MadNet/blockchain/executor/tasks/dkg"
 	dkgState "github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/state"
 	dkgTestUtils "github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/testutils"
 	"github.com/MadBase/MadNet/blockchain/testutils"
+	"math/big"
+	"testing"
 
 	"github.com/MadBase/MadNet/logging"
 	"github.com/sirupsen/logrus"
@@ -98,7 +96,6 @@ func TestMPKSubmission_Group_1_Bad1(t *testing.T) {
 	task := suite.MpkSubmissionTasks[0]
 	err := task.Initialize(ctx, logger, eth)
 	assert.Nil(t, err)
-	eth.Commit()
 
 	// Advance to gpkj submission phase; note we did *not* submit MPK
 	testutils.AdvanceTo(t, eth, task.Start+dkgStates[0].PhaseLength)
@@ -112,11 +109,9 @@ func TestMPKSubmission_Group_1_Bad1(t *testing.T) {
 // We force an error.
 // This is caused by submitting invalid state information (state is nil).
 func TestMPKSubmission_Group_1_Bad2(t *testing.T) {
-	n := 4
-	ecdsaPrivateKeys, _ := testutils.InitializePrivateKeysAndAccounts(n)
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.GetEthereumNetwork(t, ecdsaPrivateKeys, 333*time.Millisecond)
+	eth := testutils.GetEthereumNetwork(t, false)
 	defer eth.Close()
 
 	acct := eth.GetKnownAccounts()[0]
@@ -137,11 +132,9 @@ func TestMPKSubmission_Group_1_Bad2(t *testing.T) {
 // This is caused by submitting invalid state information by not successfully
 // completing KeyShareSubmission phase.
 func TestMPKSubmission_Group_2_Bad4(t *testing.T) {
-	n := 4
-	ecdsaPrivateKeys, _ := testutils.InitializePrivateKeysAndAccounts(n)
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.GetEthereumNetwork(t, ecdsaPrivateKeys, 333*time.Millisecond)
+	eth := testutils.GetEthereumNetwork(t, false)
 	defer eth.Close()
 
 	acct := eth.GetKnownAccounts()[0]

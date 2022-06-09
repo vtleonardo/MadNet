@@ -4,10 +4,6 @@ package dkg_test
 
 import (
 	"context"
-	"math/big"
-	"testing"
-	"time"
-
 	"github.com/MadBase/MadNet/blockchain/executor/tasks/dkg"
 	"github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/state"
 	dkgTestUtils "github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/testutils"
@@ -16,6 +12,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"math/big"
+	"testing"
 )
 
 //Here we test the happy path.
@@ -37,7 +35,6 @@ func TestShareDistribution_Group_1_Good(t *testing.T) {
 		err = shareDistributionTask.DoWork(ctx, logger, suite.Eth)
 		assert.Nil(t, err)
 
-		suite.Eth.Commit()
 		assert.True(t, shareDistributionTask.Success)
 
 	}
@@ -86,8 +83,6 @@ func TestShareDistribution_Group_1_Bad1(t *testing.T) {
 		}
 
 		task.DoWork(ctx, logger, suite.Eth)
-
-		suite.Eth.Commit()
 
 		// The last task should have failed
 		if idx == badIdx {
@@ -150,8 +145,6 @@ func TestShareDistribution_Group_1_Bad2(t *testing.T) {
 		}
 
 		task.DoWork(ctx, logger, suite.Eth)
-
-		suite.Eth.Commit()
 
 		// The last task should have failed
 		if idx == badIdx {
@@ -217,8 +210,6 @@ func TestShareDistribution_Group_2_Bad4(t *testing.T) {
 
 		task.DoWork(ctx, logger, eth)
 
-		eth.Commit()
-
 		// The last task should have failed
 		if idx == badCommitmentIdx {
 			assert.False(t, task.Success)
@@ -269,8 +260,6 @@ func TestShareDistribution_Group_2_Bad5(t *testing.T) {
 
 		task.DoWork(ctx, logger, eth)
 
-		eth.Commit()
-
 		// The last task should have failed
 		if idx == badShareIdx {
 			assert.False(t, task.Success)
@@ -292,11 +281,9 @@ func TestShareDistribution_Group_2_Bad5(t *testing.T) {
 // We begin by submitting invalid information;
 // we submit nil state information
 func TestShareDistribution_Group_2_Bad6(t *testing.T) {
-	n := 5
-	ecdsaPrivateKeys, _ := testutils.InitializePrivateKeysAndAccounts(n)
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.GetEthereumNetwork(t, ecdsaPrivateKeys, 333*time.Millisecond)
+	eth := testutils.GetEthereumNetwork(t, false)
 	defer eth.Close()
 
 	acct := eth.GetKnownAccounts()[0]
@@ -316,11 +303,9 @@ func TestShareDistribution_Group_2_Bad6(t *testing.T) {
 // We test to ensure that everything behaves correctly.
 // We submit invalid state information (again).
 func TestShareDistribution_Group_3_Bad7(t *testing.T) {
-	n := 4
-	ecdsaPrivateKeys, _ := testutils.InitializePrivateKeysAndAccounts(n)
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.GetEthereumNetwork(t, ecdsaPrivateKeys, 333*time.Millisecond)
+	eth := testutils.GetEthereumNetwork(t, false)
 	defer eth.Close()
 
 	acct := eth.GetKnownAccounts()[0]
@@ -379,7 +364,6 @@ func TestShareDistribution_Group_3_ShouldRetryFalse(t *testing.T) {
 		err = task.DoWork(ctx, logger, suite.Eth)
 		assert.Nil(t, err)
 
-		suite.Eth.Commit()
 		assert.True(t, task.Success)
 
 		shouldRetry := task.ShouldRetry(ctx, logger, suite.Eth)

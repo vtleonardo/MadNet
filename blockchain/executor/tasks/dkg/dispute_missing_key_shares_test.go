@@ -37,7 +37,6 @@ func TestDisputeMissingKeySharesTask_FourUnsubmittedKeyShare_DoWork_Success(t *t
 		err = keyshareSubmissionTask.DoWork(ctx, logger, eth)
 		assert.Nil(t, err)
 
-		eth.Commit()
 		assert.True(t, keyshareSubmissionTask.Success)
 
 		// event
@@ -65,7 +64,6 @@ func TestDisputeMissingKeySharesTask_FourUnsubmittedKeyShare_DoWork_Success(t *t
 		err = disputeMissingKeyshareTask.DoWork(ctx, logger, eth)
 		assert.Nil(t, err)
 
-		eth.Commit()
 		assert.True(t, disputeMissingKeyshareTask.Success)
 	}
 
@@ -99,7 +97,6 @@ func TestDisputeMissingKeySharesTask_ShouldRetry_False(t *testing.T) {
 		err = keyshareSubmissionTask.DoWork(ctx, logger, eth)
 		assert.Nil(t, err)
 
-		eth.Commit()
 		assert.True(t, keyshareSubmissionTask.Success)
 
 		// event
@@ -129,7 +126,6 @@ func TestDisputeMissingKeySharesTask_ShouldRetry_False(t *testing.T) {
 
 		assert.True(t, disputeMissingKeyshareTask.Success)
 
-		eth.Commit()
 		shouldRetry := disputeMissingKeyshareTask.ShouldRetry(ctx, logger, eth)
 		assert.False(t, shouldRetry)
 	}
@@ -158,7 +154,6 @@ func TestDisputeMissingKeySharesTask_ShouldRetry_True(t *testing.T) {
 		err = keyshareSubmissionTask.DoWork(ctx, logger, eth)
 		assert.Nil(t, err)
 
-		eth.Commit()
 		assert.True(t, keyshareSubmissionTask.Success)
 
 		// event

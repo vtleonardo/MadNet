@@ -41,7 +41,6 @@ func TestGPKjDispute_NoBadGPKj(t *testing.T) {
 		err = gpkjSubmissionTask.DoWork(ctx, logger, eth)
 		assert.Nil(t, err)
 
-		eth.Commit()
 		assert.True(t, gpkjSubmissionTask.Success)
 
 		// event
@@ -74,7 +73,6 @@ func TestGPKjDispute_NoBadGPKj(t *testing.T) {
 		err = disputeBadGPKjTask.DoWork(ctx, logger, eth)
 		assert.Nil(t, err)
 
-		eth.Commit()
 		assert.True(t, disputeBadGPKjTask.Success)
 	}
 
@@ -120,7 +118,6 @@ func TestGPKjDispute_1Invalid(t *testing.T) {
 		err = gpkjSubmissionTask.DoWork(ctx, logger, eth)
 		assert.Nil(t, err)
 
-		eth.Commit()
 		assert.True(t, gpkjSubmissionTask.Success)
 
 		// event
@@ -153,7 +150,6 @@ func TestGPKjDispute_1Invalid(t *testing.T) {
 		err = disputeBadGPKjTask.DoWork(ctx, logger, eth)
 		assert.Nil(t, err)
 
-		eth.Commit()
 		assert.True(t, disputeBadGPKjTask.Success)
 	}
 
@@ -187,7 +183,6 @@ func TestGPKjDispute_GoodMaliciousAccusation(t *testing.T) {
 		err = gpkjSubmissionTask.DoWork(ctx, logger, eth)
 		assert.Nil(t, err)
 
-		eth.Commit()
 		assert.True(t, gpkjSubmissionTask.Success)
 
 		// event
@@ -225,7 +220,6 @@ func TestGPKjDispute_GoodMaliciousAccusation(t *testing.T) {
 		err = disputeBadGPKjTask.DoWork(ctx, logger, eth)
 		assert.Nil(t, err)
 
-		eth.Commit()
 		assert.True(t, disputeBadGPKjTask.Success)
 	}
 

@@ -30,7 +30,6 @@ func TestDisputeMissingRegistrationTask_Group_1_DoTaskSuccessOneParticipantAccus
 		err = suite.DispMissingRegTasks[idx].DoWork(ctx, logger, suite.Eth)
 		assert.Nil(t, err)
 
-		suite.Eth.Commit()
 		assert.True(t, suite.DispMissingRegTasks[idx].Success)
 	}
 
@@ -60,7 +59,6 @@ func TestDisputeMissingRegistrationTask_Group_1_DoTaskSuccessThreeParticipantAcc
 		err = suite.DispMissingRegTasks[idx].DoWork(ctx, logger, suite.Eth)
 		assert.Nil(t, err)
 
-		suite.Eth.Commit()
 		assert.True(t, suite.DispMissingRegTasks[idx].Success)
 	}
 
@@ -90,7 +88,6 @@ func TestDisputeMissingRegistrationTask_Group_1_DoTaskSuccessAllParticipantsAreB
 		err = suite.DispMissingRegTasks[idx].DoWork(ctx, logger, suite.Eth)
 		assert.Nil(t, err)
 
-		suite.Eth.Commit()
 		assert.True(t, suite.DispMissingRegTasks[idx].Success)
 	}
 
@@ -136,7 +133,6 @@ func TestDisputeMissingRegistrationTask_Group_2_ShouldNotRetryAfterSuccessfullyA
 		err = suite.DispMissingRegTasks[idx].DoWork(ctx, logger, suite.Eth)
 		assert.Nil(t, err)
 
-		suite.Eth.Commit()
 		assert.True(t, suite.DispMissingRegTasks[idx].Success)
 	}
 

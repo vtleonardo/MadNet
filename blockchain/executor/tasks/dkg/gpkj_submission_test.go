@@ -4,15 +4,13 @@ package dkg_test
 
 import (
 	"context"
-	"math/big"
-	"testing"
-	"time"
-
 	"github.com/MadBase/MadNet/blockchain/executor/tasks/dkg"
 	dkgState "github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/state"
 	dkgTestUtils "github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/testutils"
 	"github.com/MadBase/MadNet/blockchain/monitor/interfaces"
 	"github.com/MadBase/MadNet/blockchain/testutils"
+	"math/big"
+	"testing"
 
 	"github.com/MadBase/MadNet/logging"
 	"github.com/sirupsen/logrus"
@@ -38,7 +36,6 @@ func TestGPKjSubmission_Group_1_GoodAllValid(t *testing.T) {
 		err = tasksVec[idx].DoWork(ctx, logger, eth)
 		assert.Nil(t, err)
 
-		eth.Commit()
 		assert.True(t, tasksVec[idx].Success)
 	}
 
@@ -61,11 +58,9 @@ func TestGPKjSubmission_Group_1_GoodAllValid(t *testing.T) {
 // Here, we submit nil for the state interface;
 // this should raise an error.
 func TestGPKjSubmission_Group_1_Bad1(t *testing.T) {
-	n := 4
-	ecdsaPrivateKeys, _ := testutils.InitializePrivateKeysAndAccounts(n)
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.GetEthereumNetwork(t, ecdsaPrivateKeys, 333*time.Millisecond)
+	eth := testutils.GetEthereumNetwork(t, false)
 	defer eth.Close()
 
 	acct := eth.GetKnownAccounts()[0]
@@ -87,11 +82,9 @@ func TestGPKjSubmission_Group_1_Bad1(t *testing.T) {
 // Here, we should raise an error because we did not successfully complete
 // the key share submission phase.
 func TestGPKjSubmission_Group_1_Bad2(t *testing.T) {
-	n := 4
-	ecdsaPrivateKeys, _ := testutils.InitializePrivateKeysAndAccounts(n)
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.GetEthereumNetwork(t, ecdsaPrivateKeys, 333*time.Millisecond)
+	eth := testutils.GetEthereumNetwork(t, false)
 	defer eth.Close()
 
 	acct := eth.GetKnownAccounts()[0]
@@ -141,7 +134,6 @@ func TestGPKjSubmission_Group_2_Bad3(t *testing.T) {
 		err := tasksVec[idx].Initialize(ctx, logger, eth)
 		assert.Nil(t, err)
 
-		eth.Commit()
 	}
 
 	// Do GPKj Submission task; this will fail because invalid submission;
@@ -173,7 +165,6 @@ func TestGPKjSubmission_Group_2_ShouldRetry_returnsFalse(t *testing.T) {
 		err = tasksVec[idx].DoWork(ctx, logger, eth)
 		assert.Nil(t, err)
 
-		eth.Commit()
 		assert.True(t, tasksVec[idx].Success)
 
 		shouldRetry := tasksVec[idx].ShouldRetry(ctx, logger, eth)

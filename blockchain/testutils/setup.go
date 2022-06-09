@@ -1,7 +1,6 @@
 package testutils
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"crypto/ecdsa"
@@ -36,16 +35,30 @@ var (
 	scriptRegisterValidator = "register_test"
 	scriptStartHardHatNode  = "hardhat_node"
 	scriptInit              = "init"
-	hardHatProcessId        = "HARDHAT_PROCESS_ID"
+	scriptClean             = "clean"
+
+	envHardHatProcessId = "HARDHAT_PROCESS_ID"
+
+	configEndpoint       = "http://localhost:8545"
+	configDefaultAccount = "0x546f99f244b7b58b855330ae0e2bc1b30b41302f"
+	configFactoryAddress = "0x0b1f9c2b7bed6db83295c7b5158e3806d67ec5bc"
+	configFinalityDelay  = uint64(1)
 )
 
 func getEthereumDetails() (*ethereum.Details, error) {
+
+	getProjectRootPath()
+	rootPath := getProjectRootPath()
+
+	assetKey := append(rootPath, "assets", "test", "keys")
+	assetPasscode := append(rootPath, "assets", "test", "passcodes.txt")
+
 	details, err := ethereum.NewEndpoint(
-		getConfigurationProperty("endpoint"),
-		"../../assets/test/keys",
-		"../../assets/test/passcodes.txt",
-		"0x546F99F244b7B58B855330AE0E2BC1b30b41302F",
-		1,
+		configEndpoint,
+		filepath.Join(filepath.Join(assetKey...)),
+		filepath.Join(filepath.Join(assetPasscode...)),
+		configDefaultAccount,
+		configFinalityDelay,
 		500,
 		0,
 	)
@@ -82,7 +95,7 @@ func waitForHardHatNode(ctx context.Context) error {
 		case <-time.After(time.Second):
 			body := bytes.NewReader(buff.Bytes())
 			_, err := c.Post(
-				getConfigurationProperty("endpoint"),
+				configEndpoint,
 				"application/json",
 				body,
 			)
@@ -97,7 +110,7 @@ func waitForHardHatNode(ctx context.Context) error {
 
 func isHardHatRunning() (bool, error) {
 	var client = http.Client{Timeout: 2 * time.Second}
-	resp, err := client.Head(getConfigurationProperty("endpoint"))
+	resp, err := client.Head(configEndpoint)
 	if err != nil {
 		return false, err
 	}
@@ -124,7 +137,7 @@ func startHardHat(t *testing.T, ctx context.Context) *ethereum.Details {
 	assert.NotNilf(t, details, "Ethereum network should not be Nil")
 
 	log.Printf("Deploying contracts ...")
-	err = runScriptDeployContracts(details, ctx, getConfigurationProperty("factoryAddress"))
+	err = runScriptDeployContracts(details, ctx)
 	if err != nil {
 		details.Close()
 		assert.Nilf(t, err, "Error deploying contracts: %v")
@@ -162,7 +175,7 @@ func stopHardHat() error {
 		return nil
 	}
 
-	pid, _ := strconv.Atoi(os.Getenv(hardHatProcessId))
+	pid, _ := strconv.Atoi(os.Getenv(envHardHatProcessId))
 	process, err := os.FindProcess(pid)
 	if err != nil {
 		log.Printf("Error finding HardHat pid: %v", err)
@@ -275,48 +288,11 @@ func InitializePrivateKeysAndAccounts(n int) ([]*ecdsa.PrivateKey, []accounts.Ac
 	return privateKeys, accounts
 }
 
-// GetConfigurationKeyValueFromFile given a file following the pattern `key = value`, it returns the value of `key`
-func GetConfigurationKeyValueFromFile(filePath string, key string) (string, error) {
-	rootPath := getProjectRootPath()
-	rootPath = append(rootPath, filePath)
-	fileFullPath := filepath.Join(rootPath...)
-
-	f, err := os.Open(fileFullPath)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	var value string
-	for scanner.Scan() {
-		if strings.Contains(scanner.Text(), key) {
-			value = scanner.Text()
-			break
-		}
-	}
-
-	splits := strings.Split(value, "=")
-	return strings.Trim(splits[1], " \""), nil
-}
-
-func getConfigurationProperty(key string) string {
-	value, err := GetConfigurationKeyValueFromFile("scripts/base-files/baseConfig", key)
-	if err != nil {
-		return ""
-	}
-	return value
-}
-
 func GetOwnerAccount() (*common.Address, *ecdsa.PrivateKey, error) {
 	rootPath := getProjectRootPath()
 
 	// Account
-	acctAddress, err := GetConfigurationKeyValueFromFile("scripts/base-files/owner.toml", "defaultAccount")
-	if err != nil {
-		log.Printf("Error retrieving default account address. %v", err)
-		return nil, nil, err
-	}
+	acctAddress := configDefaultAccount
 	acctAddressLowerCase := strings.ToLower(acctAddress)
 
 	// Password
@@ -401,7 +377,7 @@ func runScriptHardHatNode() error {
 		return err
 	}
 
-	err = os.Setenv(hardHatProcessId, strconv.Itoa(cmd.Process.Pid))
+	err = os.Setenv(envHardHatProcessId, strconv.Itoa(cmd.Process.Pid))
 	if err != nil {
 		log.Printf("Error setting environment variable: %v", err)
 		return err
@@ -410,7 +386,12 @@ func runScriptHardHatNode() error {
 	return nil
 }
 
-func RunScriptInitializeValidator(n int) error {
+func RunScriptInit(n int) error {
+
+	err := runScriptClean()
+	if err != nil {
+		return err
+	}
 
 	rootPath := getProjectRootPath()
 	scriptPath := getMainScriptPath()
@@ -422,7 +403,7 @@ func RunScriptInitializeValidator(n int) error {
 	}
 
 	setCommandStdOut(&cmd)
-	err := cmd.Start()
+	err = cmd.Start()
 	if err != nil {
 		log.Printf("Could not execute %s script: %v", scriptInit, err)
 		return err
@@ -431,7 +412,28 @@ func RunScriptInitializeValidator(n int) error {
 	return nil
 }
 
-func runScriptDeployContracts(eth *ethereum.Details, ctx context.Context, factoryAddress string) error {
+func runScriptClean() error {
+
+	rootPath := getProjectRootPath()
+	scriptPath := getMainScriptPath()
+
+	cmd := exec.Cmd{
+		Path: scriptPath,
+		Args: []string{scriptPath, scriptClean},
+		Dir:  filepath.Join(rootPath...),
+	}
+
+	setCommandStdOut(&cmd)
+	err := cmd.Start()
+	if err != nil {
+		log.Printf("Could not execute %s script: %v", scriptClean, err)
+		return err
+	}
+
+	return nil
+}
+
+func runScriptDeployContracts(eth *ethereum.Details, ctx context.Context) error {
 
 	rootPath := getProjectRootPath()
 	scriptPath := getMainScriptPath()
@@ -456,7 +458,7 @@ func runScriptDeployContracts(eth *ethereum.Details, ctx context.Context, factor
 	}
 
 	addr := common.Address{}
-	copy(addr[:], common.FromHex(factoryAddress))
+	copy(addr[:], common.FromHex(configFactoryAddress))
 	eth.Contracts().Initialize(ctx, addr)
 
 	return nil

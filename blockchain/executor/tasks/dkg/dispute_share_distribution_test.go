@@ -4,15 +4,13 @@ package dkg_test
 
 import (
 	"context"
-	"math/big"
-	"testing"
-	"time"
-
 	"github.com/MadBase/MadNet/blockchain/executor/tasks/dkg"
 	dkgState "github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/state"
 	dkgTestUtils "github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/testutils"
 	"github.com/MadBase/MadNet/blockchain/monitor/events"
 	"github.com/MadBase/MadNet/blockchain/testutils"
+	"math/big"
+	"testing"
 
 	"github.com/MadBase/MadNet/logging"
 	"github.com/ethereum/go-ethereum/common"
@@ -47,7 +45,6 @@ func TestDisputeShareDistributionTask_Group_1_GoodAllValid(t *testing.T) {
 		err = task.DoWork(ctx, logger, suite.Eth)
 		assert.Nil(t, err)
 
-		suite.Eth.Commit()
 		assert.True(t, task.Success)
 	}
 
@@ -99,7 +96,6 @@ func TestDisputeShareDistributionTask_Group_1_GoodMaliciousShare(t *testing.T) {
 		err = task.DoWork(ctx, logger, suite.Eth)
 		assert.Nil(t, err)
 
-		suite.Eth.Commit()
 		assert.True(t, task.Success)
 
 		// event
@@ -132,7 +128,6 @@ func TestDisputeShareDistributionTask_Group_1_GoodMaliciousShare(t *testing.T) {
 		err = disputeShareDistributionTask.DoWork(ctx, logger, suite.Eth)
 		assert.Nil(t, err)
 
-		suite.Eth.Commit()
 		assert.True(t, disputeShareDistributionTask.Success)
 	}
 
@@ -156,11 +151,10 @@ func TestDisputeShareDistributionTask_Group_1_GoodMaliciousShare(t *testing.T) {
 // This test is meant to raise an error resulting from an invalid argument
 // for the Ethereum interface.
 func TestDisputeShareDistributionTask_Group_1_Bad1(t *testing.T) {
-	n := 4
-	ecdsaPrivateKeys, _ := testutils.InitializePrivateKeysAndAccounts(n)
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.GetEthereumNetwork(t, ecdsaPrivateKeys, 333*time.Millisecond)
+	//eth := testutils.GetEthereumNetwork(t, ecdsaPrivateKeys, 333*time.Millisecond)
+	eth := testutils.GetEthereumNetwork(t, false)
 	defer eth.Close()
 
 	acct := eth.GetKnownAccounts()[0]
@@ -183,11 +177,9 @@ func TestDisputeShareDistributionTask_Group_1_Bad1(t *testing.T) {
 // this should raise an error resulting from not successfully completing
 // ShareDistribution phase.
 func TestDisputeShareDistributionTask_Group_2_Bad2(t *testing.T) {
-	n := 4
-	ecdsaPrivateKeys, _ := testutils.InitializePrivateKeysAndAccounts(n)
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.GetEthereumNetwork(t, ecdsaPrivateKeys, 333*time.Millisecond)
+	eth := testutils.GetEthereumNetwork(t, false)
 	defer eth.Close()
 
 	accts := eth.GetKnownAccounts()
@@ -235,7 +227,6 @@ func TestDisputeShareDistributionTask_Group_2_DoRetry_returnsFalse(t *testing.T)
 		err = task.DoWork(ctx, logger, suite.Eth)
 		assert.Nil(t, err)
 
-		suite.Eth.Commit()
 		assert.True(t, task.Success)
 	}
 
@@ -280,13 +271,8 @@ func TestDisputeShareDistributionTask_Group_2_DoRetry_returnsTrue(t *testing.T) 
 		err = task.DoWork(ctx, logger, suite.Eth)
 		assert.Nil(t, err)
 
-		suite.Eth.Commit()
 		assert.True(t, task.Success)
 	}
-
-	suite.Eth.Commit()
-	suite.Eth.Commit()
-	suite.Eth.Commit()
 
 	// Do Should Retry
 	for idx := 0; idx < n; idx++ {

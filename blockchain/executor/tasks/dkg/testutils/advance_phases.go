@@ -6,11 +6,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"errors"
-	"math/big"
-	"strings"
-	"testing"
-	"time"
-
 	"github.com/MadBase/MadNet/blockchain/executor/tasks/dkg"
 	"github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/state"
 	"github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/utils"
@@ -21,6 +16,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
+	"math/big"
+	"strings"
+	"testing"
 
 	"github.com/MadBase/MadNet/crypto/bn256"
 	"github.com/MadBase/MadNet/crypto/bn256/cloudflare"
@@ -116,7 +114,8 @@ func InitializeETHDKG(eth ethereum.Network, callOpts *bind.TransactOpts, ctx con
 func StartFromRegistrationOpenPhase(t *testing.T, n int, unregisteredValidators int, phaseLength uint16) *TestSuite {
 	ecdsaPrivateKeys, accounts := testutils.InitializePrivateKeysAndAccounts(n)
 
-	eth := testutils.GetEthereumNetwork(t, ecdsaPrivateKeys, 1000*time.Millisecond)
+	//eth := testutils.GetEthereumNetwork(t, ecdsaPrivateKeys, 1000*time.Millisecond)
+	eth := testutils.GetEthereumNetwork(t, false)
 	assert.NotNil(t, eth)
 
 	ctx := context.Background()
@@ -186,8 +185,6 @@ func StartFromRegistrationOpenPhase(t *testing.T, n int, unregisteredValidators 
 
 		err = regTasks[idx].DoWork(ctx, logger, eth)
 		assert.Nil(t, err)
-
-		eth.Commit()
 		assert.True(t, regTasks[idx].Success)
 	}
 
@@ -286,8 +283,6 @@ func StartFromShareDistributionPhase(t *testing.T, n int, undistributedSharesIdx
 
 		err = shareDistTask.DoWork(ctx, logger, suite.Eth)
 		assert.Nil(t, err)
-
-		suite.Eth.Commit()
 		assert.True(t, shareDistTask.Success)
 
 		// event
@@ -362,8 +357,6 @@ func StartFromKeyShareSubmissionPhase(t *testing.T, n int, undistributedShares i
 
 		err = keyshareSubmissionTask.DoWork(ctx, logger, suite.Eth)
 		assert.Nil(t, err)
-
-		suite.Eth.Commit()
 		assert.True(t, keyshareSubmissionTask.Success)
 
 		// event
@@ -426,8 +419,6 @@ func StartFromMPKSubmissionPhase(t *testing.T, n int, phaseLength uint16) *TestS
 			assert.Nil(t, err)
 		}
 	}
-
-	eth.Commit()
 
 	height, err := suite.Eth.GetCurrentHeight(ctx)
 	assert.Nil(t, err)
@@ -495,8 +486,6 @@ func StartFromGPKjPhase(t *testing.T, n int, undistributedGPKjIdx []int, badGPKj
 
 		err = gpkjSubTask.DoWork(ctx, logger, suite.Eth)
 		assert.Nil(t, err)
-
-		suite.Eth.Commit()
 		assert.True(t, gpkjSubTask.Success)
 
 		// event

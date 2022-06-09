@@ -28,7 +28,6 @@ func TestDisputeMissingShareDistributionTask_Group_1_ShouldAccuseOneValidatorWho
 		err = task.DoWork(ctx, logger, suite.Eth)
 		assert.Nil(t, err)
 
-		suite.Eth.Commit()
 		assert.True(t, task.Success)
 	}
 
@@ -55,7 +54,6 @@ func TestDisputeMissingShareDistributionTask_Group_1_ShouldAccuseAllValidatorsWh
 		err = task.DoWork(ctx, logger, suite.Eth)
 		assert.Nil(t, err)
 
-		suite.Eth.Commit()
 		assert.True(t, task.Success)
 	}
 
@@ -94,7 +92,6 @@ func TestDisputeMissingShareDistributionTask_Group_1_ShouldNotAccuseValidatorsWh
 			assert.Nil(t, err)
 		}
 
-		suite.Eth.Commit()
 		if idx == n-1 {
 			assert.False(t, task.Success)
 		} else {
@@ -143,7 +140,6 @@ func TestDisputeMissingShareDistributionTask_Group_2_DisputeMissingShareDistribu
 		err = task.DoWork(ctx, logger, suite.Eth)
 		assert.Nil(t, err)
 
-		suite.Eth.Commit()
 		assert.True(t, task.Success)
 	}
 
@@ -172,7 +168,6 @@ func TestDisputeMissingShareDistributionTask_Group_2_ShouldAccuseOneValidatorWho
 		err = disputeMissingShareDistTask.DoWork(ctx, logger, suite.Eth)
 		assert.Nil(t, err)
 
-		suite.Eth.Commit()
 		assert.True(t, disputeMissingShareDistTask.Success)
 
 		// disputeShareDist
@@ -183,7 +178,6 @@ func TestDisputeMissingShareDistributionTask_Group_2_ShouldAccuseOneValidatorWho
 		err = disputeShareDistTask.DoWork(ctx, logger, suite.Eth)
 		assert.Nil(t, err)
 
-		suite.Eth.Commit()
 		assert.True(t, disputeShareDistTask.Success)
 	}
 

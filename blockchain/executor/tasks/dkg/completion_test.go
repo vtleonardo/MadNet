@@ -20,7 +20,7 @@ import (
 func TestCompletion_Group_1_AllGood(t *testing.T) {
 	n := 4
 
-	err := testutils.RunScriptInitializeValidator(5)
+	err := testutils.RunScriptInit(5)
 	assert.Nil(t, err)
 
 	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100)

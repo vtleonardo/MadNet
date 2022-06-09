@@ -36,8 +36,6 @@ func TestDisputeMissingGPKjTask_Group_1_FourUnsubmittedGPKj_DoWork_Success(t *te
 		assert.Nil(t, err)
 		err = gpkjSubmissionTask.DoWork(ctx, logger, eth)
 		assert.Nil(t, err)
-
-		eth.Commit()
 		assert.True(t, gpkjSubmissionTask.Success)
 
 		// event
@@ -57,8 +55,6 @@ func TestDisputeMissingGPKjTask_Group_1_FourUnsubmittedGPKj_DoWork_Success(t *te
 		assert.Nil(t, err)
 		err = disputeMissingGPKjTask.DoWork(ctx, logger, eth)
 		assert.Nil(t, err)
-
-		eth.Commit()
 		assert.True(t, disputeMissingGPKjTask.Success)
 	}
 
@@ -90,8 +86,6 @@ func TestDisputeMissingGPKjTask_Group_1_ShouldRetry_False(t *testing.T) {
 		assert.Nil(t, err)
 		err = gpkjSubmissionTask.DoWork(ctx, logger, eth)
 		assert.Nil(t, err)
-
-		eth.Commit()
 		assert.True(t, gpkjSubmissionTask.Success)
 
 		// event
@@ -112,8 +106,6 @@ func TestDisputeMissingGPKjTask_Group_1_ShouldRetry_False(t *testing.T) {
 		assert.Nil(t, err)
 		err = disputeMissingGPKjTask.DoWork(ctx, logger, eth)
 		assert.Nil(t, err)
-
-		eth.Commit()
 		assert.True(t, disputeMissingGPKjTask.Success)
 
 		shouldRetry := disputeMissingGPKjTask.ShouldRetry(ctx, logger, eth)
@@ -143,7 +135,6 @@ func TestDisputeMissingGPKjTask_Group_1_ShouldRetry_True(t *testing.T) {
 		err = gpkjSubmissionTask.DoWork(ctx, logger, eth)
 		assert.Nil(t, err)
 
-		eth.Commit()
 		assert.True(t, gpkjSubmissionTask.Success)
 
 		// event
@@ -186,7 +177,6 @@ func TestDisputeMissingGPKjTask_Group_2_ShouldAccuseOneValidatorWhoDidNotDistrib
 		err = disputeMissingGPKjTask.DoWork(ctx, logger, suite.Eth)
 		assert.Nil(t, err)
 
-		suite.Eth.Commit()
 		assert.True(t, disputeMissingGPKjTask.Success)
 
 		// disputeGPKj
@@ -197,7 +187,6 @@ func TestDisputeMissingGPKjTask_Group_2_ShouldAccuseOneValidatorWhoDidNotDistrib
 		err = disputeGPKjTask.DoWork(ctx, logger, suite.Eth)
 		assert.Nil(t, err)
 
-		suite.Eth.Commit()
 		assert.True(t, disputeGPKjTask.Success)
 	}
 
@@ -236,7 +225,6 @@ func TestDisputeMissingGPKjTask_Group_2_ShouldAccuseTwoValidatorWhoDidNotDistrib
 		err = disputeMissingGPKjTask.DoWork(ctx, logger, suite.Eth)
 		assert.Nil(t, err)
 
-		suite.Eth.Commit()
 		assert.True(t, disputeMissingGPKjTask.Success)
 
 		// disputeGPKj
@@ -247,7 +235,6 @@ func TestDisputeMissingGPKjTask_Group_2_ShouldAccuseTwoValidatorWhoDidNotDistrib
 		err = disputeGPKjTask.DoWork(ctx, logger, suite.Eth)
 		assert.Nil(t, err)
 
-		suite.Eth.Commit()
 		assert.True(t, disputeGPKjTask.Success)
 	}
 
