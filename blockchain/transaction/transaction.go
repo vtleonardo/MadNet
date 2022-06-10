@@ -214,25 +214,24 @@ type WatcherBackend struct {
 	requestChannel     <-chan subscribeRequest          // Channel used to send request to this backend service
 }
 
-func (b *WatcherBackend) Loop() {
+func (wb *WatcherBackend) Loop() {
 
 	poolingTime := time.After(constants.TxPollingTime)
 	for {
 		select {
-		case req, ok := <-b.requestChannel:
+		case req, ok := <-wb.requestChannel:
 			if !ok {
-				b.logger.Debugf("request channel closed, exiting")
+				wb.logger.Debugf("request channel closed, exiting")
 				return
 			}
 			if req.responseChannel == nil {
-				b.logger.Debug("Invalid request for txn without a response channel, ignoring")
+				wb.logger.Debug("Invalid request for txn without a response channel, ignoring")
 				continue
 			}
-			b.queue(req)
+			wb.queue(req)
 
 		case <-poolingTime:
-			b.collectReceipts()
-			poolingTime = time.After(constants.TxPollingTime)
+			wb.collectReceipts()
 		}
 	}
 }
@@ -307,6 +306,7 @@ func (wb *WatcherBackend) queue(req subscribeRequest) {
 			retryGroup:             wb.retryGroupId,
 		}
 		// initialize the retry group
+		wb.retryGroups = make(map[uint64]uint64)
 		wb.retryGroups[wb.retryGroupId] = 1
 		// increasing the monotonically ID
 		wb.retryGroupId++
@@ -661,15 +661,15 @@ func WatcherFromNetwork(network ethereum.Network) *Watcher {
 }
 
 // Start the transaction watcher service
-func (f *Watcher) StartLoop() {
-	go f.backend.Loop()
+func (w *Watcher) StartLoop() {
+	go w.backend.Loop()
 }
 
 // Close the transaction watcher service
-func (f *Watcher) Close() {
-	f.logger.Debug("closing request channel...")
-	close(f.requestChannel)
-	f.closeMainContext()
+func (w *Watcher) Close() {
+	w.logger.Debug("closing request channel...")
+	close(w.requestChannel)
+	w.closeMainContext()
 }
 
 // Subscribe a transaction to be watched by the transaction watcher service. If
@@ -678,14 +678,14 @@ func (f *Watcher) Close() {
 // final tx hash in the receipt can be different from the initial txn sent. This
 // can happen if the txn got stale and the watcher did a transaction replace
 // with higher fees.
-func (tw *Watcher) Subscribe(ctx context.Context, txn *types.Transaction) (<-chan *objects.ReceiptResponse, error) {
-	tw.logger.WithField("Txn", txn.Hash().Hex()).Debug("Subscribing for a transaction")
-	respChannel := NewResponseChannel[SubscribeResponse](tw.logger)
+func (w *Watcher) Subscribe(ctx context.Context, txn *types.Transaction) (<-chan *objects.ReceiptResponse, error) {
+	w.logger.WithField("Txn", txn.Hash().Hex()).Debug("Subscribing for a transaction")
+	respChannel := NewResponseChannel[SubscribeResponse](w.logger)
 	defer respChannel.CloseChannel()
 	req := subscribeRequest{txn: txn, responseChannel: respChannel}
 
 	select {
-	case tw.requestChannel <- req:
+	case w.requestChannel <- req:
 	case <-ctx.Done():
 		return nil, &ErrInvalidTransactionRequest{fmt.Sprintf("context cancelled reqChannel: %v", ctx.Err())}
 	}
@@ -700,7 +700,7 @@ func (tw *Watcher) Subscribe(ctx context.Context, txn *types.Transaction) (<-cha
 
 // function that wait for a transaction receipt. This is blocking function that
 // will wait for a response in the input receiptResponseChannel
-func (f *Watcher) Wait(ctx context.Context, receiptResponseChannel <-chan *objects.ReceiptResponse) (*types.Receipt, error) {
+func (w *Watcher) Wait(ctx context.Context, receiptResponseChannel <-chan *objects.ReceiptResponse) (*types.Receipt, error) {
 	select {
 	case receiptResponse := <-receiptResponseChannel:
 		return receiptResponse.Receipt, receiptResponse.Err
@@ -710,15 +710,15 @@ func (f *Watcher) Wait(ctx context.Context, receiptResponseChannel <-chan *objec
 }
 
 // Queue a transaction and wait for its receipt
-func (f *Watcher) SubscribeAndWait(ctx context.Context, txn *types.Transaction) (*types.Receipt, error) {
-	receiptResponseChannel, err := f.Subscribe(ctx, txn)
+func (w *Watcher) SubscribeAndWait(ctx context.Context, txn *types.Transaction) (*types.Receipt, error) {
+	receiptResponseChannel, err := w.Subscribe(ctx, txn)
 	if err != nil {
 		return nil, err
 	}
-	return f.Wait(ctx, receiptResponseChannel)
+	return w.Wait(ctx, receiptResponseChannel)
 }
 
-func (f *Watcher) Status(ctx context.Context) error {
-	f.logger.Error("Status function not implemented yet")
+func (w *Watcher) Status(ctx context.Context) error {
+	w.logger.Error("Status function not implemented yet")
 	return nil
 }

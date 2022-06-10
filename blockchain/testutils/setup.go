@@ -5,14 +5,13 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"encoding/json"
-	"github.com/MadBase/MadNet/blockchain/transaction"
 	"github.com/MadBase/MadNet/logging"
 	"io"
 	"io/ioutil"
 	"log"
 	"math/big"
 	"net/http"
-	os "os"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
@@ -38,6 +37,7 @@ var (
 	scriptClean             = "clean"
 
 	envHardHatProcessId = "HARDHAT_PROCESS_ID"
+	envSkipRegistration = "SKIP_REGISTRATION"
 
 	configEndpoint       = "http://localhost:8545"
 	configDefaultAccount = "0x546f99f244b7b58b855330ae0e2bc1b30b41302f"
@@ -123,7 +123,7 @@ func isHardHatRunning() (bool, error) {
 	return false, nil
 }
 
-func startHardHat(t *testing.T, ctx context.Context) *ethereum.Details {
+func startHardHat(t *testing.T, ctx context.Context, validatorsCount int) *ethereum.Details {
 
 	log.Printf("Starting HardHat ...")
 	err := runScriptHardHatNode()
@@ -143,12 +143,13 @@ func startHardHat(t *testing.T, ctx context.Context) *ethereum.Details {
 		assert.Nilf(t, err, "Error deploying contracts: %v")
 	}
 
-	log.Printf("Registering validators ...")
 	validatorAddresses := make([]string, 0)
 	knownAccounts := details.GetKnownAccounts()
-	for _, acct := range knownAccounts {
+	for _, acct := range knownAccounts[:validatorsCount] {
 		validatorAddresses = append(validatorAddresses, acct.Address.String())
 	}
+
+	log.Printf("Registering %d validators ...", len(validatorAddresses))
 	err = runScriptRegisterValidators(details, validatorAddresses)
 	if err != nil {
 		details.Close()
@@ -158,8 +159,8 @@ func startHardHat(t *testing.T, ctx context.Context) *ethereum.Details {
 
 	log.Printf("Funding accounts ...")
 	for _, account := range knownAccounts[1:] {
-		watcher := transaction.WatcherFromNetwork(details)
-		watcher.StartLoop()
+		//watcher := transaction.WatcherFromNetwork(details)
+		//watcher.StartLoop()
 
 		txn, err := ethereum.TransferEther(details, logger, details.GetDefaultAccount().Address, account.Address, big.NewInt(100000000000000000))
 		assert.Nilf(t, err, "Error in TrasferEther transaction")
@@ -198,7 +199,7 @@ func stopHardHat() error {
 	return nil
 }
 
-func GetEthereumNetwork(t *testing.T, cleanStart bool) ethereum.Network {
+func GetEthereumNetwork(t *testing.T, cleanStart bool, validatorsCount int) ethereum.Network {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -206,7 +207,7 @@ func GetEthereumNetwork(t *testing.T, cleanStart bool) ethereum.Network {
 	isRunning, _ := isHardHatRunning()
 	if !isRunning {
 		log.Printf("Hardhat is not running. Start new HardHat")
-		details := startHardHat(t, ctx)
+		details := startHardHat(t, ctx, validatorsCount)
 		assert.NotNilf(t, details, "Expected details to be not nil")
 		return details
 	}
@@ -215,7 +216,7 @@ func GetEthereumNetwork(t *testing.T, cleanStart bool) ethereum.Network {
 		err := stopHardHat()
 		assert.Nilf(t, err, "Failed to stopHardHat")
 
-		details := startHardHat(t, ctx)
+		details := startHardHat(t, ctx, validatorsCount)
 		assert.NotNilf(t, details, "Expected details to be not nil")
 		return details
 	}
@@ -438,7 +439,7 @@ func runScriptDeployContracts(eth *ethereum.Details, ctx context.Context) error 
 	rootPath := getProjectRootPath()
 	scriptPath := getMainScriptPath()
 
-	err := os.Setenv("SKIP_REGISTRATION", "1")
+	err := os.Setenv(envSkipRegistration, "1")
 	if err != nil {
 		log.Printf("Error setting environment variable: %v", err)
 		return err
@@ -492,8 +493,8 @@ func runScriptRegisterValidators(eth *ethereum.Details, validatorAddresses []str
 	return nil
 }
 
-// send a command to the hardhat server via an RPC call
-func SendHardhatCommand(command string, params ...interface{}) error {
+// sendHardhatCommand sends a command to the hardhat server via an RPC call
+func sendHardhatCommand(command string, params ...interface{}) error {
 
 	commandJson := &ethereum.JsonRPCMessage{
 		Version: "2.0",
@@ -506,7 +507,6 @@ func SendHardhatCommand(command string, params ...interface{}) error {
 	if err != nil {
 		return err
 	}
-
 	commandJson.Params = paramsJson
 
 	c := http.Client{}
@@ -516,14 +516,12 @@ func SendHardhatCommand(command string, params ...interface{}) error {
 		return err
 	}
 
-	reader := bytes.NewReader(buff.Bytes())
-
+	body := bytes.NewReader(buff.Bytes())
 	resp, err := c.Post(
-		"http://127.0.0.1:8545",
+		configEndpoint,
 		"application/json",
-		reader,
+		body,
 	)
-
 	if err != nil {
 		return err
 	}
@@ -535,18 +533,18 @@ func SendHardhatCommand(command string, params ...interface{}) error {
 	return nil
 }
 
-// mine a certain number of hardhat blocks
+// MineBlocks mines a certain number of hardhat blocks
 func MineBlocks(t *testing.T, eth ethereum.Network, blocksToMine uint64) {
 	var blocksToMineString = "0x" + strconv.FormatUint(blocksToMine, 16)
 	log.Printf("hardhat_mine %v blocks ", blocksToMine)
-	err := SendHardhatCommand("hardhat_mine", blocksToMineString)
+	err := sendHardhatCommand("hardhat_mine", blocksToMineString)
 	if err != nil {
 		panic(err)
 	}
 }
 
 // advance to a certain block number
-func AdvanceTo(t *testing.T, eth ethereum.Network, target uint64) {
+func AdvanceTo(eth ethereum.Network, target uint64) {
 	currentBlock, err := eth.GetCurrentHeight(context.Background())
 	if err != nil {
 		panic(err)
@@ -559,17 +557,16 @@ func AdvanceTo(t *testing.T, eth ethereum.Network, target uint64) {
 
 	log.Printf("hardhat_mine %v blocks to target height %v", blocksToMine, target)
 
-	err = SendHardhatCommand("hardhat_mine", blocksToMineString)
+	err = sendHardhatCommand("hardhat_mine", blocksToMineString)
 	if err != nil {
 		panic(err)
 	}
 }
 
-// The the Base fee for the next hardhat block. Can be used to make tx stale.
-func SetNextBlockBaseFee(t *testing.T, eth ethereum.Network, target uint64) {
+// SetNextBlockBaseFee The Base fee for the next hardhat block. Can be used to make tx stale.
+func SetNextBlockBaseFee(target uint64) {
 	log.Printf("Setting hardhat_setNextBlockBaseFeePerGas to %v", target)
-
-	err := SendHardhatCommand("hardhat_setNextBlockBaseFeePerGas", "0x"+strconv.FormatUint(target, 16))
+	err := sendHardhatCommand("hardhat_setNextBlockBaseFeePerGas", "0x"+strconv.FormatUint(target, 16))
 	if err != nil {
 		panic(err)
 	}
@@ -579,7 +576,7 @@ func SetNextBlockBaseFee(t *testing.T, eth ethereum.Network, target uint64) {
 func SetAutoMine(t *testing.T, eth ethereum.Network, autoMine bool) {
 	log.Printf("Setting Automine to %v", autoMine)
 
-	err := SendHardhatCommand("evm_setAutomine", autoMine)
+	err := sendHardhatCommand("evm_setAutomine", autoMine)
 	if err != nil {
 		panic(err)
 	}
@@ -591,7 +588,7 @@ func SetAutoMine(t *testing.T, eth ethereum.Network, autoMine bool) {
 func SetBlockInterval(t *testing.T, eth ethereum.Network, intervalInMilliSeconds uint64) {
 	SetAutoMine(t, eth, false)
 	log.Printf("Setting block interval to %v seconds", intervalInMilliSeconds)
-	err := SendHardhatCommand("evm_setIntervalMining", intervalInMilliSeconds)
+	err := sendHardhatCommand("evm_setIntervalMining", intervalInMilliSeconds)
 	if err != nil {
 		panic(err)
 	}

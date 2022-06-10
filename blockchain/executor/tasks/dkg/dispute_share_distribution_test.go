@@ -114,7 +114,7 @@ func TestDisputeShareDistributionTask_Group_1_GoodMaliciousShare(t *testing.T) {
 	currentHeight, err := suite.Eth.GetCurrentHeight(ctx)
 	assert.Nil(t, err)
 	nextPhaseAt := currentHeight + suite.DKGStates[0].ConfirmationLength
-	testutils.AdvanceTo(t, suite.Eth, nextPhaseAt)
+	testutils.AdvanceTo(suite.Eth, nextPhaseAt)
 
 	// Do Share Dispute task
 	for idx := 0; idx < n; idx++ {
@@ -154,7 +154,7 @@ func TestDisputeShareDistributionTask_Group_1_Bad1(t *testing.T) {
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
 	//eth := testutils.GetEthereumNetwork(t, ecdsaPrivateKeys, 333*time.Millisecond)
-	eth := testutils.GetEthereumNetwork(t, false)
+	eth := testutils.GetEthereumNetwork(t, false, 4)
 	defer eth.Close()
 
 	acct := eth.GetKnownAccounts()[0]
@@ -179,7 +179,7 @@ func TestDisputeShareDistributionTask_Group_1_Bad1(t *testing.T) {
 func TestDisputeShareDistributionTask_Group_2_Bad2(t *testing.T) {
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.GetEthereumNetwork(t, false)
+	eth := testutils.GetEthereumNetwork(t, false, 4)
 	defer eth.Close()
 
 	accts := eth.GetKnownAccounts()

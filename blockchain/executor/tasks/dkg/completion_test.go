@@ -9,18 +9,16 @@ import (
 	dkgTestUtils "github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/testutils"
 	"github.com/MadBase/MadNet/blockchain/monitor/events"
 	"github.com/MadBase/MadNet/blockchain/testutils"
-	"testing"
-
 	"github.com/MadBase/MadNet/logging"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 // We complete everything correctly, happy path
 func TestCompletion_Group_1_AllGood(t *testing.T) {
 	n := 4
-
-	err := testutils.RunScriptInit(5)
+	err := testutils.RunScriptInit(n)
 	assert.Nil(t, err)
 
 	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100)
@@ -56,7 +54,7 @@ func TestCompletion_Group_1_AllGood(t *testing.T) {
 	}
 
 	// Advance to Completion phase
-	testutils.AdvanceTo(t, eth, completionStart)
+	testutils.AdvanceTo(eth, completionStart)
 
 	for idx := 0; idx < n; idx++ {
 		state := dkgStates[idx]
@@ -133,7 +131,7 @@ func TestCompletion_Group_1_StartFromCompletion(t *testing.T) {
 func TestCompletion_Group_2_Bad1(t *testing.T) {
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.GetEthereumNetwork(t, false)
+	eth := testutils.GetEthereumNetwork(t, false, 4)
 	defer eth.Close()
 
 	acct := eth.GetKnownAccounts()[0]
@@ -154,7 +152,7 @@ func TestCompletion_Group_2_Bad1(t *testing.T) {
 func TestCompletion_Group_2_Bad2(t *testing.T) {
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.GetEthereumNetwork(t, false)
+	eth := testutils.GetEthereumNetwork(t, false, 4)
 	defer eth.Close()
 
 	acct := eth.GetKnownAccounts()[0]
@@ -208,10 +206,10 @@ func TestCompletion_Group_2_Bad3(t *testing.T) {
 	}
 
 	// Advance to Completion phase
-	testutils.AdvanceTo(t, eth, completionStart)
+	testutils.AdvanceTo(eth, completionStart)
 
 	// Advance to end of Completion phase
-	testutils.AdvanceTo(t, eth, completionEnd)
+	testutils.AdvanceTo(eth, completionEnd)
 
 	err = completionTasks[0].Initialize(ctx, logger, eth)
 	if err != nil {
@@ -294,7 +292,7 @@ func TestCompletion_Group_3_ShouldRetry_returnsTrue(t *testing.T) {
 	}
 
 	// Advance to Completion phase
-	testutils.AdvanceTo(t, eth, completionStart)
+	testutils.AdvanceTo(eth, completionStart)
 
 	err = completionTasks[0].Initialize(ctx, logger, eth)
 	assert.Nil(t, err)

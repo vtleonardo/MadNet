@@ -13,15 +13,14 @@ import (
 	"github.com/MadBase/MadNet/blockchain/testutils"
 	"github.com/MadBase/MadNet/blockchain/transaction"
 	"github.com/MadBase/MadNet/bridge/bindings"
+	"github.com/MadBase/MadNet/crypto/bn256"
+	"github.com/MadBase/MadNet/crypto/bn256/cloudflare"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"math/big"
 	"strings"
 	"testing"
-
-	"github.com/MadBase/MadNet/crypto/bn256"
-	"github.com/MadBase/MadNet/crypto/bn256/cloudflare"
 
 	"github.com/MadBase/MadNet/blockchain/ethereum"
 	"github.com/MadBase/MadNet/logging"
@@ -75,7 +74,6 @@ func SetETHDKGPhaseLength(length uint16, eth ethereum.Network, callOpts *bind.Tr
 	if rcpt == nil {
 		return nil, nil, errors.New("non existent receipt for tx ContractFactory.CallAny(ethdkg, setPhaseLength(...))")
 	}
-
 	return txn, rcpt, nil
 }
 
@@ -115,7 +113,7 @@ func StartFromRegistrationOpenPhase(t *testing.T, n int, unregisteredValidators 
 	ecdsaPrivateKeys, accounts := testutils.InitializePrivateKeysAndAccounts(n)
 
 	//eth := testutils.GetEthereumNetwork(t, ecdsaPrivateKeys, 1000*time.Millisecond)
-	eth := testutils.GetEthereumNetwork(t, false)
+	eth := testutils.GetEthereumNetwork(t, false, n)
 	assert.NotNil(t, eth)
 
 	ctx := context.Background()
@@ -218,10 +216,10 @@ func StartFromRegistrationOpenPhase(t *testing.T, n int, unregisteredValidators 
 		}
 
 		// skip all the way to ShareDistribution phase
-		testutils.AdvanceTo(t, eth, shareDistributionTasks[0].Start)
+		testutils.AdvanceTo(eth, shareDistributionTasks[0].Start)
 	} else {
 		// this means some validators did not register, and the next phase is DisputeMissingRegistration
-		testutils.AdvanceTo(t, eth, dkgStates[0].PhaseStart+dkgStates[0].PhaseLength)
+		testutils.AdvanceTo(eth, dkgStates[0].PhaseStart+dkgStates[0].PhaseLength)
 	}
 
 	return &TestSuite{
@@ -325,10 +323,10 @@ func StartFromShareDistributionPhase(t *testing.T, n int, undistributedSharesIdx
 		suite.DisputeMissingKeyshareTasks = disputeMissingKeySharesTasks
 
 		// skip all the way to DisputeShareDistribution phase
-		testutils.AdvanceTo(t, suite.Eth, dispShareDistStartBlock)
+		testutils.AdvanceTo(suite.Eth, dispShareDistStartBlock)
 	} else {
 		// this means some validators did not distribute shares, and the next phase is DisputeMissingShareDistribution
-		testutils.AdvanceTo(t, suite.Eth, suite.DKGStates[0].PhaseStart+suite.DKGStates[0].PhaseLength)
+		testutils.AdvanceTo(suite.Eth, suite.DKGStates[0].PhaseStart+suite.DKGStates[0].PhaseLength)
 	}
 
 	return suite
@@ -340,7 +338,7 @@ func StartFromKeyShareSubmissionPhase(t *testing.T, n int, undistributedShares i
 	logger := logging.GetLogger("test").WithField("Validator", "")
 
 	keyshareSubmissionStartBlock := suite.KeyshareSubmissionTasks[0].Start
-	testutils.AdvanceTo(t, suite.Eth, keyshareSubmissionStartBlock)
+	testutils.AdvanceTo(suite.Eth, keyshareSubmissionStartBlock)
 
 	// Do key share submission task
 	for idx := 0; idx < n; idx++ {
@@ -389,10 +387,10 @@ func StartFromKeyShareSubmissionPhase(t *testing.T, n int, undistributedShares i
 		}
 
 		// skip all the way to MPKSubmission phase
-		testutils.AdvanceTo(t, suite.Eth, mpkSubmissionTaskStart)
+		testutils.AdvanceTo(suite.Eth, mpkSubmissionTaskStart)
 	} else {
 		// this means some validators did not submit key shares, and the next phase is DisputeMissingKeyShares
-		testutils.AdvanceTo(t, suite.Eth, suite.DKGStates[0].PhaseStart+suite.DKGStates[0].PhaseLength)
+		testutils.AdvanceTo(suite.Eth, suite.DKGStates[0].PhaseStart+suite.DKGStates[0].PhaseLength)
 	}
 
 	suite.MpkSubmissionTasks = mpkSubmissionTasks
@@ -522,10 +520,10 @@ func StartFromGPKjPhase(t *testing.T, n int, undistributedGPKjIdx []int, badGPKj
 		suite.CompletionTasks = completionTasks
 
 		// skip all the way to DisputeGPKj phase
-		testutils.AdvanceTo(t, suite.Eth, dispGPKjStartBlock)
+		testutils.AdvanceTo(suite.Eth, dispGPKjStartBlock)
 	} else {
 		// this means some validators did not submit their GPKjs, and the next phase is DisputeMissingGPKj
-		testutils.AdvanceTo(t, suite.Eth, suite.DKGStates[0].PhaseStart+suite.DKGStates[0].PhaseLength)
+		testutils.AdvanceTo(suite.Eth, suite.DKGStates[0].PhaseStart+suite.DKGStates[0].PhaseLength)
 	}
 
 	return suite
@@ -535,7 +533,7 @@ func StartFromCompletion(t *testing.T, n int, phaseLength uint16) *TestSuite {
 	suite := StartFromGPKjPhase(t, n, []int{}, []int{}, phaseLength)
 
 	// move to Completion phase
-	testutils.AdvanceTo(t, suite.Eth, suite.CompletionTasks[0].Start+suite.DKGStates[0].ConfirmationLength)
+	testutils.AdvanceTo(suite.Eth, suite.CompletionTasks[0].Start+suite.DKGStates[0].ConfirmationLength)
 
 	return suite
 }

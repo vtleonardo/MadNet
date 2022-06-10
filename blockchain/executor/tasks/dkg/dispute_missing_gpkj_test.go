@@ -45,7 +45,7 @@ func TestDisputeMissingGPKjTask_Group_1_FourUnsubmittedGPKj_DoWork_Success(t *te
 		}
 	}
 
-	testutils.AdvanceTo(t, eth, disputeGPKjStartBlock)
+	testutils.AdvanceTo(eth, disputeGPKjStartBlock)
 
 	// Do dispute missing gpkj task
 	for idx := 0; idx < n; idx++ {
@@ -96,7 +96,7 @@ func TestDisputeMissingGPKjTask_Group_1_ShouldRetry_False(t *testing.T) {
 	}
 
 	nextPhaseAt := currentHeight + dkgStates[0].PhaseLength
-	testutils.AdvanceTo(t, eth, nextPhaseAt)
+	testutils.AdvanceTo(eth, nextPhaseAt)
 
 	// Do dispute missing gpkj task
 	for idx := 0; idx < n; idx++ {
@@ -145,7 +145,7 @@ func TestDisputeMissingGPKjTask_Group_1_ShouldRetry_True(t *testing.T) {
 	}
 
 	nextPhaseAt := currentHeight + dkgStates[0].PhaseLength
-	testutils.AdvanceTo(t, eth, nextPhaseAt)
+	testutils.AdvanceTo(eth, nextPhaseAt)
 
 	// Do dispute missing gpkj task
 	for idx := 0; idx < n; idx++ {

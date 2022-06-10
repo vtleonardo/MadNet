@@ -60,7 +60,7 @@ func TestGPKjDispute_NoBadGPKj(t *testing.T) {
 	assert.Nil(t, err)
 	disputePhaseAt := currentHeight + suite.DKGStates[0].ConfirmationLength
 
-	testutils.AdvanceTo(t, eth, disputePhaseAt)
+	testutils.AdvanceTo(eth, disputePhaseAt)
 
 	// Do dispute bad gpkj task
 	for idx := 0; idx < n; idx++ {
@@ -137,7 +137,7 @@ func TestGPKjDispute_1Invalid(t *testing.T) {
 	assert.Nil(t, err)
 	disputePhaseAt := currentHeight + suite.DKGStates[0].ConfirmationLength
 
-	testutils.AdvanceTo(t, eth, disputePhaseAt)
+	testutils.AdvanceTo(eth, disputePhaseAt)
 
 	// Do dispute bad gpkj task
 	for idx := 0; idx < n; idx++ {
@@ -202,7 +202,7 @@ func TestGPKjDispute_GoodMaliciousAccusation(t *testing.T) {
 	assert.Nil(t, err)
 	disputePhaseAt := currentHeight + suite.DKGStates[0].ConfirmationLength
 
-	testutils.AdvanceTo(t, eth, disputePhaseAt)
+	testutils.AdvanceTo(eth, disputePhaseAt)
 
 	// Do dispute bad gpkj task
 	badAccuserIdx := 0

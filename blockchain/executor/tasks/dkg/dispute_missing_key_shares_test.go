@@ -25,7 +25,7 @@ func TestDisputeMissingKeySharesTask_FourUnsubmittedKeyShare_DoWork_Success(t *t
 	logger := logging.GetLogger("test").WithField("Validator", "")
 
 	// skip DisputeShareDistribution and move to KeyShareSubmission phase
-	testutils.AdvanceTo(t, eth, suite.KeyshareSubmissionTasks[0].Start)
+	testutils.AdvanceTo(eth, suite.KeyshareSubmissionTasks[0].Start)
 
 	// Do key share submission task
 	for idx := 0; idx < n-unsubmittedKeyShares; idx++ {
@@ -53,7 +53,7 @@ func TestDisputeMissingKeySharesTask_FourUnsubmittedKeyShare_DoWork_Success(t *t
 
 	// advance into the end of KeyShareSubmission phase,
 	// which is the start of DisputeMissingKeyShares phase
-	testutils.AdvanceTo(t, eth, suite.KeyshareSubmissionTasks[0].End)
+	testutils.AdvanceTo(eth, suite.KeyshareSubmissionTasks[0].End)
 
 	// Do dispute missing key share task
 	for idx := 0; idx < n; idx++ {
@@ -85,7 +85,7 @@ func TestDisputeMissingKeySharesTask_ShouldRetry_False(t *testing.T) {
 	logger := logging.GetLogger("test").WithField("Validator", "")
 
 	// skip DisputeShareDistribution and move to KeyShareSubmission phase
-	testutils.AdvanceTo(t, eth, suite.KeyshareSubmissionTasks[0].Start)
+	testutils.AdvanceTo(eth, suite.KeyshareSubmissionTasks[0].Start)
 
 	// Do key share submission task
 	for idx := 0; idx < n-unsubmittedKeyShares; idx++ {
@@ -113,7 +113,7 @@ func TestDisputeMissingKeySharesTask_ShouldRetry_False(t *testing.T) {
 
 	// advance into the end of KeyShareSubmission phase,
 	// which is the start of DisputeMissingKeyShares phase
-	testutils.AdvanceTo(t, eth, suite.KeyshareSubmissionTasks[0].End)
+	testutils.AdvanceTo(eth, suite.KeyshareSubmissionTasks[0].End)
 
 	// Do dispute missing key share task
 	for idx := 0; idx < n; idx++ {
@@ -142,7 +142,7 @@ func TestDisputeMissingKeySharesTask_ShouldRetry_True(t *testing.T) {
 	logger := logging.GetLogger("test").WithField("Validator", "")
 
 	// skip DisputeShareDistribution and move to KeyShareSubmission phase
-	testutils.AdvanceTo(t, eth, suite.KeyshareSubmissionTasks[0].Start)
+	testutils.AdvanceTo(eth, suite.KeyshareSubmissionTasks[0].Start)
 
 	// Do key share submission task
 	for idx := 0; idx < n-unsubmittedKeyShares; idx++ {
@@ -170,7 +170,7 @@ func TestDisputeMissingKeySharesTask_ShouldRetry_True(t *testing.T) {
 
 	// advance into the end of KeyShareSubmission phase,
 	// which is the start of DisputeMissingKeyShares phase
-	testutils.AdvanceTo(t, eth, suite.KeyshareSubmissionTasks[0].End)
+	testutils.AdvanceTo(eth, suite.KeyshareSubmissionTasks[0].End)
 
 	// Do dispute missing key share task
 	for idx := 0; idx < n; idx++ {

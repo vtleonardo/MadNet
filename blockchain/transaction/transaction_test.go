@@ -170,7 +170,7 @@ func TestSubscribeAndWaitForStaleTx(t *testing.T) {
 
 	testutils.SetBlockInterval(t, eth, 500)
 	// setting base fee to 10k GWei
-	testutils.SetNextBlockBaseFee(t, eth, 10_000_000_000_000)
+	testutils.SetNextBlockBaseFee(10_000_000_000_000)
 
 	accounts := eth.GetKnownAccounts()
 	assert.Equal(t, numAccounts, len(accounts))
