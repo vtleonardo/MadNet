@@ -29,7 +29,28 @@ func executeCommand(dir string, command ...string) error {
 	return nil
 }
 
-func createTempFolder() string {
+func executeCommandWithOutput(dir string, command ...string) (string, error) {
+	args := strings.Split(strings.Join(command, " "), " ")
+	cmd := exec.Cmd{
+		Args:   args,
+		Dir:    dir,
+		Stdin:  os.Stdout,
+		Stdout: os.Stdin,
+		Stderr: os.Stderr,
+	}
+
+	err := cmd.Start()
+	if err != nil {
+		log.Printf("Could not execute command: %v", args)
+		return "nil", err
+	}
+
+	stdout, err := cmd.Output()
+	return string(stdout), err
+
+}
+
+func CreateTempFolder() string {
 	// create tmp folder
 	file, err := ioutil.TempFile("dir", "prefix")
 	if err != nil {
@@ -39,7 +60,7 @@ func createTempFolder() string {
 	return file.Name() // For example "dir/prefix054003078"
 }
 
-func copyFileToFolder(src, dst string) (int64, error) {
+func CopyFileToFolder(src, dst string) (int64, error) {
 	sourceFileStat, err := os.Stat(src)
 	if err != nil {
 		return 0, err

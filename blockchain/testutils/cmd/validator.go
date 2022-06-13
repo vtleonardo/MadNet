@@ -8,12 +8,11 @@ import (
 
 func RunValidator(validatorIndex int) error {
 
-	//./madnet --config ./scripts/generated/config/validator$1.toml validator
-	rootDir := filepath.Join(testutils.GetProjectRootPath()...)
+	rootDir := testutils.GetProjectRootPath()
+	validatorConfigPath := append(rootDir, "scripts", "generated", "config", fmt.Sprintf("validator%d.toml", validatorIndex))
 
-	validatorConfig := append(rootDir, "scripts", "generated", "config", fmt.Sprintf("validator%d.toml", validatorIndex))
+	err := executeCommand(filepath.Join(rootDir...), "./madnet --config", filepath.Join(validatorConfigPath...), "validator")
 
-	err := executeCommand(rootDir, "./madnet --config", filepath.Join(validatorConfig...), "validator")
 	if err != nil {
 		return err
 	}

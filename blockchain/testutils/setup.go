@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"encoding/json"
+	cmd2 "github.com/MadBase/MadNet/blockchain/testutils/cmd"
 	"github.com/MadBase/MadNet/logging"
 	"io"
 	"io/ioutil"
@@ -387,52 +388,48 @@ func runScriptHardHatNode() error {
 	return nil
 }
 
-func RunScriptInit(n int) error {
+func Init(workingDir string, n int) error {
 
-	err := runScriptClean()
+	err := cmd2.RunClean(workingDir)
 	if err != nil {
 		return err
 	}
 
-	rootPath := GetProjectRootPath()
-	scriptPath := GetMainScriptPath()
-
-	cmd := exec.Cmd{
-		Path: scriptPath,
-		Args: []string{scriptPath, scriptInit, strconv.Itoa(n)},
-		Dir:  filepath.Join(rootPath...),
-	}
-
-	SetCommandStdOut(&cmd)
-	err = cmd.Start()
+	err = cmd2.RunInit(workingDir, n)
 	if err != nil {
-		log.Printf("Could not execute %s script: %v", scriptInit, err)
 		return err
 	}
+
+	// TODO - change this to be global
+	//SetCommandStdOut(&cmd)
+	//err = cmd.Start()
+	//if err != nil {
+	//	return err
+	//}
 
 	return nil
 }
 
-func runScriptClean() error {
-
-	rootPath := GetProjectRootPath()
-	scriptPath := GetMainScriptPath()
-
-	cmd := exec.Cmd{
-		Path: scriptPath,
-		Args: []string{scriptPath, scriptClean},
-		Dir:  filepath.Join(rootPath...),
-	}
-
-	SetCommandStdOut(&cmd)
-	err := cmd.Start()
-	if err != nil {
-		log.Printf("Could not execute %s script: %v", scriptClean, err)
-		return err
-	}
-
-	return nil
-}
+//func runScriptClean() error {
+//
+//	rootPath := GetProjectRootPath()
+//	scriptPath := GetMainScriptPath()
+//
+//	cmd := exec.Cmd{
+//		Path: scriptPath,
+//		Args: []string{scriptPath, scriptClean},
+//		Dir:  filepath.Join(rootPath...),
+//	}
+//
+//	SetCommandStdOut(&cmd)
+//	err := cmd.Start()
+//	if err != nil {
+//		log.Printf("Could not execute %s script: %v", scriptClean, err)
+//		return err
+//	}
+//
+//	return nil
+//}
 
 func runScriptDeployContracts(eth *ethereum.Details, ctx context.Context) error {
 

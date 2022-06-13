@@ -9,16 +9,21 @@ import (
 	dkgTestUtils "github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/testutils"
 	"github.com/MadBase/MadNet/blockchain/monitor/events"
 	"github.com/MadBase/MadNet/blockchain/testutils"
+	"github.com/MadBase/MadNet/blockchain/testutils/cmd"
 	"github.com/MadBase/MadNet/logging"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"os"
 	"testing"
 )
 
 // We complete everything correctly, happy path
 func TestCompletion_Group_1_AllGood(t *testing.T) {
+	workingDir := cmd.CreateTempFolder()
+	defer os.Remove(workingDir)
+
 	n := 4
-	err := testutils.RunScriptInit(n)
+	err := testutils.Init(workingDir, n)
 	assert.Nil(t, err)
 
 	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100)

@@ -2,19 +2,18 @@ package cmd
 
 import (
 	"github.com/MadBase/MadNet/blockchain/testutils"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 )
 
-func RunDeploy() error {
+func RunDeploy(workingDir string) error {
 
 	hardhatNodeBaseCmd := "npx hardhat --network dev"
 	factoryAddress := "0x0b1F9c2b7bED6Db83295c7B5158E3806d67eC5bc" // TODO - how to calculate this
 	rootPath := testutils.GetProjectRootPath()
 	bridgeDir := testutils.GetBridgePath()
-	workingDir := createTempFolder()
-	defer os.Remove(workingDir)
 
 	err := executeCommand(bridgeDir, "npx hardhat setHardhatIntervalMining --network dev --enable-auto-mine")
 	if err != nil {
@@ -27,17 +26,17 @@ func RunDeploy() error {
 	deploymentList := append(rootPath, "scripts", "base-files", "deploymentList")
 	deploymentArgsTemplate := append(rootPath, "scripts", "base-files", "deploymentArgsTemplate")
 	ownerToml := append(rootPath, "scripts", "base-files", "owner.toml")
-	_, err = copyFileToFolder(filepath.Join(filepath.Join(deploymentList...)), workingDir)
+	_, err = CopyFileToFolder(filepath.Join(filepath.Join(deploymentList...)), workingDir)
 	if err != nil {
 		log.Printf("File deploymentList copied in %s", workingDir)
 		return err
 	}
-	_, err = copyFileToFolder(filepath.Join(filepath.Join(deploymentArgsTemplate...)), workingDir)
+	_, err = CopyFileToFolder(filepath.Join(filepath.Join(deploymentArgsTemplate...)), workingDir)
 	if err != nil {
 		log.Printf("File deploymentArgsTemplate copied in %s", workingDir)
 		return err
 	}
-	_, err = copyFileToFolder(filepath.Join(filepath.Join(ownerToml...)), workingDir)
+	_, err = CopyFileToFolder(filepath.Join(filepath.Join(ownerToml...)), workingDir)
 	if err != nil {
 		log.Printf("File deploymentArgsTemplate copied in %s", workingDir)
 		return err
@@ -156,6 +155,13 @@ func RunDeploy() error {
 	//fi
 	//echo -e "failed to auto start validators terminals, manually open a terminal for each validator and execute"
 	//fi
+	generatedValidatorConfigFiles := append(rootPath, "scripts", "generated", "config")
+	files, _ := ioutil.ReadDir(filepath.Join(generatedValidatorConfigFiles...))
+	err = RunValidator(len(files))
+	if err != nil {
+		log.Printf("Could not execute script: %v", err)
+		return err
+	}
 
 	return nil
 }
