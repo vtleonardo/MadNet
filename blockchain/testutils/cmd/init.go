@@ -39,17 +39,19 @@ func RunInit(workingDir string, numbersOfValidator int) error {
 	rootPath := testutils.GetProjectRootPath()
 	for i := 1; i < numbersOfValidator; i++ {
 		// TODO change to working direcotir password file
-		output, err := executeCommandWithOutput(filepath.Join(rootPath...), "ethkey generate --passwordfile ./scripts/base-files/passwordFile | cut -d' ' -f2")
+		cmd, err := executeCommand(rootPath, "ethkey generate --passwordfile ./scripts/base-files/passwordFile | cut -d' ' -f2")
 		if err != nil {
 			return err
 		}
-		ADDRESS := output
+		stdout, err := cmd.Output()
+		ADDRESS := stdout
 
-		output, err = executeCommandWithOutput(filepath.Join(rootPath...), "hexdump -n 16 -e '4/4 \"%08X\" 1 \"\\n\"' /dev/urandom")
+		cmd, err = executeCommand(rootPath, "hexdump -n 16 -e '4/4 \"%08X\" 1 \"\\n\"' /dev/urandom")
 		if err != nil {
 			return err
 		}
-		PK := output
+		stdout, err = cmd.Output()
+		PK := stdout
 
 		// TODO - use temp working dir and validator number
 		sedCommand := fmt.Sprintf(`
@@ -65,7 +67,7 @@ func RunInit(workingDir string, numbersOfValidator int) error {
 			sed -e 's/monitorDB = .*/monitorDB = \"scripts\/generated\/monitorDBs\/validator'"%d"'\/\"/' |
 			sed -e 's/privateKey = .*/privateKey = \"'"%s"'\"/' > ./scripts/generated/config/validator%d.toml`,
 			ADDRESS, ADDRESS, LA, PA, DA, LSA, i, i, PK, i)
-		err = executeCommand(filepath.Join(rootPath...), sedCommand)
+		_, err = executeCommand(rootPath, sedCommand)
 		if err != nil {
 			return err
 		}
@@ -88,7 +90,7 @@ func RunInit(workingDir string, numbersOfValidator int) error {
 		jqCommand := fmt.Sprintf(`
 			jq '.alloc += {"'"$(echo %s | cut -c3-)"'": {balance:"10000000000000000000000"}}' %s > 	%s.tmp && mv %s.tmp %s
 		`, ADDRESS, genesisPath, genesisPath, genesisPath, genesisPath)
-		err = executeCommand(filepath.Join(rootPath...), jqCommand)
+		_, err = executeCommand(rootPath, jqCommand)
 		if err != nil {
 			return err
 		}

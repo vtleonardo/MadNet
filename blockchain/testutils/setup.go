@@ -5,8 +5,15 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"encoding/json"
-	cmd2 "github.com/MadBase/MadNet/blockchain/testutils/cmd"
+	"github.com/MadBase/MadNet/blockchain/ethereum"
+	"github.com/MadBase/MadNet/blockchain/testutils/cmd"
 	"github.com/MadBase/MadNet/logging"
+	"github.com/MadBase/MadNet/utils"
+	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/stretchr/testify/assert"
 	"io"
 	"io/ioutil"
 	"log"
@@ -17,29 +24,10 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 	"testing"
-	"time"
-
-	"github.com/MadBase/MadNet/blockchain/ethereum"
-	"github.com/MadBase/MadNet/utils"
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/stretchr/testify/assert"
 )
 
 var (
-	scriptDeploy            = "deploy"
-	scriptRegisterValidator = "register_test"
-	scriptStartHardHatNode  = "hardhat_node"
-	scriptInit              = "init"
-	scriptClean             = "clean"
-
-	envHardHatProcessId = "HARDHAT_PROCESS_ID"
-	envSkipRegistration = "SKIP_REGISTRATION"
-
 	configEndpoint       = "http://localhost:8545"
 	configDefaultAccount = "0x546f99f244b7b58b855330ae0e2bc1b30b41302f"
 	configFactoryAddress = "0x0b1f9c2b7bed6db83295c7b5158e3806d67ec5bc"
@@ -48,16 +36,14 @@ var (
 
 func getEthereumDetails() (*ethereum.Details, error) {
 
-	GetProjectRootPath()
 	rootPath := GetProjectRootPath()
-
-	assetKey := append(rootPath, "assets", "test", "keys")
-	assetPasscode := append(rootPath, "assets", "test", "passcodes.txt")
+	assetKey := filepath.Join(rootPath, "assets", "test", "keys")
+	assetPasscode := filepath.Join(rootPath, "assets", "test", "passcodes.txt")
 
 	details, err := ethereum.NewEndpoint(
 		configEndpoint,
-		filepath.Join(filepath.Join(assetKey...)),
-		filepath.Join(filepath.Join(assetPasscode...)),
+		assetKey,
+		assetPasscode,
 		configDefaultAccount,
 		configFinalityDelay,
 		500,
@@ -66,71 +52,13 @@ func getEthereumDetails() (*ethereum.Details, error) {
 	return details, err
 }
 
-func waitForHardHatNode(ctx context.Context) error {
-	c := http.Client{}
-	msg := &ethereum.JsonRPCMessage{
-		Version: "2.0",
-		ID:      []byte("1"),
-		Method:  "eth_chainId",
-		Params:  make([]byte, 0),
-	}
-
-	params, err := json.Marshal(make([]string, 0))
-	if err != nil {
-		log.Printf("could not run hardhat node: %v", err)
-		return err
-	}
-	msg.Params = params
-
-	var buff bytes.Buffer
-	err = json.NewEncoder(&buff).Encode(msg)
-	if err != nil {
-		log.Printf("Error creating a buffer json encoder: %v", err)
-		return err
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(time.Second):
-			body := bytes.NewReader(buff.Bytes())
-			_, err := c.Post(
-				configEndpoint,
-				"application/json",
-				body,
-			)
-			if err != nil {
-				continue
-			}
-			log.Printf("HardHat node started correctly")
-			return nil
-		}
-	}
-}
-
-func isHardHatRunning() (bool, error) {
-	var client = http.Client{Timeout: 2 * time.Second}
-	resp, err := client.Head(configEndpoint)
-	if err != nil {
-		return false, err
-	}
-	resp.Body.Close()
-
-	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
-		return true, nil
-	}
-
-	return false, nil
-}
-
-func startHardHat(t *testing.T, ctx context.Context, validatorsCount int) *ethereum.Details {
+func startHardHat(t *testing.T, ctx context.Context, validatorsCount int, workingDir string) *ethereum.Details {
 
 	log.Printf("Starting HardHat ...")
-	err := runScriptHardHatNode()
+	err := cmd.RunHardHatNode()
 	assert.Nilf(t, err, "Error starting hardhat node")
 
-	err = waitForHardHatNode(ctx)
+	err = cmd.WaitForHardHatNode(ctx)
 	assert.Nilf(t, err, "Failed to wait for hardhat to be up and running")
 
 	details, err := getEthereumDetails()
@@ -138,11 +66,14 @@ func startHardHat(t *testing.T, ctx context.Context, validatorsCount int) *ether
 	assert.NotNilf(t, details, "Ethereum network should not be Nil")
 
 	log.Printf("Deploying contracts ...")
-	err = runScriptDeployContracts(details, ctx)
+	err = cmd.RunDeploy(workingDir)
 	if err != nil {
 		details.Close()
 		assert.Nilf(t, err, "Error deploying contracts: %v")
 	}
+	addr := common.Address{}
+	copy(addr[:], common.FromHex(configFactoryAddress))
+	details.Contracts().Initialize(ctx, addr)
 
 	validatorAddresses := make([]string, 0)
 	knownAccounts := details.GetKnownAccounts()
@@ -151,7 +82,7 @@ func startHardHat(t *testing.T, ctx context.Context, validatorsCount int) *ether
 	}
 
 	log.Printf("Registering %d validators ...", len(validatorAddresses))
-	err = runScriptRegisterValidators(details, validatorAddresses)
+	err = cmd.RunRegister()
 	if err != nil {
 		details.Close()
 		assert.Nilf(t, err, "Error registering validators: %v")
@@ -160,9 +91,6 @@ func startHardHat(t *testing.T, ctx context.Context, validatorsCount int) *ether
 
 	log.Printf("Funding accounts ...")
 	for _, account := range knownAccounts[1:] {
-		//watcher := transaction.WatcherFromNetwork(details)
-		//watcher.StartLoop()
-
 		txn, err := ethereum.TransferEther(details, logger, details.GetDefaultAccount().Address, account.Address, big.NewInt(100000000000000000))
 		assert.Nilf(t, err, "Error in TrasferEther transaction")
 		assert.NotNilf(t, txn, "Expected transaction not to be nil")
@@ -170,54 +98,24 @@ func startHardHat(t *testing.T, ctx context.Context, validatorsCount int) *ether
 	return details
 }
 
-func stopHardHat() error {
-	log.Printf("Stopping HardHat running instance ...")
-	isRunning, _ := isHardHatRunning()
-	if !isRunning {
-		return nil
-	}
-
-	pid, _ := strconv.Atoi(os.Getenv(envHardHatProcessId))
-	process, err := os.FindProcess(pid)
-	if err != nil {
-		log.Printf("Error finding HardHat pid: %v", err)
-		return err
-	}
-
-	err = process.Signal(syscall.SIGTERM)
-	if err != nil {
-		log.Printf("Error waiting sending SIGTERM signal to HardHat process: %v", err)
-		return err
-	}
-
-	_, err = process.Wait()
-	if err != nil {
-		log.Printf("Error waiting HardHat process to stop: %v", err)
-		return err
-	}
-
-	log.Printf("HardHat node has been stopped")
-	return nil
-}
-
-func GetEthereumNetwork(t *testing.T, cleanStart bool, validatorsCount int) ethereum.Network {
+func GetEthereumNetwork(t *testing.T, cleanStart bool, validatorsCount int, workingDir string) ethereum.Network {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	isRunning, _ := isHardHatRunning()
+	isRunning, _ := cmd.IsHardHatRunning()
 	if !isRunning {
 		log.Printf("Hardhat is not running. Start new HardHat")
-		details := startHardHat(t, ctx, validatorsCount)
+		details := startHardHat(t, ctx, validatorsCount, workingDir)
 		assert.NotNilf(t, details, "Expected details to be not nil")
 		return details
 	}
 
 	if cleanStart {
-		err := stopHardHat()
+		err := cmd.StopHardHat()
 		assert.Nilf(t, err, "Failed to stopHardHat")
 
-		details := startHardHat(t, ctx, validatorsCount)
+		details := startHardHat(t, ctx, validatorsCount, workingDir)
 		assert.NotNilf(t, details, "Expected details to be not nil")
 		return details
 	}
@@ -298,12 +196,8 @@ func GetOwnerAccount() (*common.Address, *ecdsa.PrivateKey, error) {
 	acctAddressLowerCase := strings.ToLower(acctAddress)
 
 	// Password
-	passwordPath := append(rootPath, "scripts")
-	passwordPath = append(passwordPath, "base-files")
-	passwordPath = append(passwordPath, "passwordFile")
-	passwordFullPath := filepath.Join(passwordPath...)
-
-	passwordFileContent, err := ioutil.ReadFile(passwordFullPath)
+	passwordFull := filepath.Join(rootPath, "scripts", "base-files", "passwordFile")
+	passwordFileContent, err := ioutil.ReadFile(passwordFull)
 	if err != nil {
 		log.Printf("Error opening password file. %v", err)
 		return nil, nil, err
@@ -311,12 +205,8 @@ func GetOwnerAccount() (*common.Address, *ecdsa.PrivateKey, error) {
 	password := string(passwordFileContent)
 
 	// Wallet
-	walletPath := append(rootPath, "scripts")
-	walletPath = append(walletPath, "base-files")
-	walletPath = append(walletPath, acctAddressLowerCase)
-	walletFullPath := filepath.Join(walletPath...)
-
-	jsonBytes, err := ioutil.ReadFile(walletFullPath)
+	walletFull := filepath.Join(rootPath, "scripts", "base-files", acctAddressLowerCase)
+	jsonBytes, err := ioutil.ReadFile(walletFull)
 	if err != nil {
 		log.Printf("Error opening %v file.  %v", acctAddressLowerCase, err)
 		return nil, nil, err
@@ -361,41 +251,14 @@ func GetOwnerAccount() (*common.Address, *ecdsa.PrivateKey, error) {
 //	return eth, logger, nil
 //}
 
-func runScriptHardHatNode() error {
-
-	rootPath := GetProjectRootPath()
-	scriptPath := GetMainScriptPath()
-
-	cmd := exec.Cmd{
-		Path: scriptPath,
-		Args: []string{scriptPath, scriptStartHardHatNode},
-		Dir:  filepath.Join(rootPath...),
-	}
-
-	SetCommandStdOut(&cmd)
-	err := cmd.Start()
-	if err != nil {
-		log.Printf("Could not execute %s script: %v", scriptStartHardHatNode, err)
-		return err
-	}
-
-	err = os.Setenv(envHardHatProcessId, strconv.Itoa(cmd.Process.Pid))
-	if err != nil {
-		log.Printf("Error setting environment variable: %v", err)
-		return err
-	}
-
-	return nil
-}
-
 func Init(workingDir string, n int) error {
 
-	err := cmd2.RunClean(workingDir)
+	err := cmd.RunClean(workingDir)
 	if err != nil {
 		return err
 	}
 
-	err = cmd2.RunInit(workingDir, n)
+	err = cmd.RunInit(workingDir, n)
 	if err != nil {
 		return err
 	}
@@ -406,86 +269,6 @@ func Init(workingDir string, n int) error {
 	//if err != nil {
 	//	return err
 	//}
-
-	return nil
-}
-
-//func runScriptClean() error {
-//
-//	rootPath := GetProjectRootPath()
-//	scriptPath := GetMainScriptPath()
-//
-//	cmd := exec.Cmd{
-//		Path: scriptPath,
-//		Args: []string{scriptPath, scriptClean},
-//		Dir:  filepath.Join(rootPath...),
-//	}
-//
-//	SetCommandStdOut(&cmd)
-//	err := cmd.Start()
-//	if err != nil {
-//		log.Printf("Could not execute %s script: %v", scriptClean, err)
-//		return err
-//	}
-//
-//	return nil
-//}
-
-func runScriptDeployContracts(eth *ethereum.Details, ctx context.Context) error {
-
-	rootPath := GetProjectRootPath()
-	scriptPath := GetMainScriptPath()
-
-	err := os.Setenv(envSkipRegistration, "1")
-	if err != nil {
-		log.Printf("Error setting environment variable: %v", err)
-		return err
-	}
-
-	cmd := exec.Cmd{
-		Path: scriptPath,
-		Args: []string{scriptPath, scriptDeploy},
-		Dir:  filepath.Join(rootPath...),
-	}
-
-	SetCommandStdOut(&cmd)
-	err = cmd.Run()
-	if err != nil {
-		log.Printf("Could not execute %s script: %v", scriptDeploy, err)
-		return err
-	}
-
-	addr := common.Address{}
-	copy(addr[:], common.FromHex(configFactoryAddress))
-	eth.Contracts().Initialize(ctx, addr)
-
-	return nil
-}
-
-func runScriptRegisterValidators(eth *ethereum.Details, validatorAddresses []string) error {
-
-	rootPath := GetProjectRootPath()
-	scriptPath := GetMainScriptPath()
-
-	args := []string{
-		scriptPath,
-		scriptRegisterValidator,
-		eth.Contracts().ContractFactoryAddress().String(),
-	}
-	args = append(args, validatorAddresses...)
-
-	cmd := exec.Cmd{
-		Path: scriptPath,
-		Args: args,
-		Dir:  filepath.Join(rootPath...),
-	}
-
-	SetCommandStdOut(&cmd)
-	err := cmd.Run()
-	if err != nil {
-		log.Printf("Could not execute %s script: %v", scriptRegisterValidator, err)
-		return err
-	}
 
 	return nil
 }
@@ -592,7 +375,7 @@ func SetBlockInterval(t *testing.T, eth ethereum.Network, intervalInMilliSeconds
 }
 
 // GetProjectRootPath returns the project root path
-func GetProjectRootPath() []string {
+func GetProjectRootPath() string {
 
 	rootPath := []string{string(os.PathSeparator)}
 
@@ -600,7 +383,7 @@ func GetProjectRootPath() []string {
 	stdout, err := cmd.Output()
 	if err != nil {
 		log.Printf("Error getting project root path: %v", err)
-		return rootPath
+		return ""
 	}
 
 	path := string(stdout)
@@ -612,39 +395,13 @@ func GetProjectRootPath() []string {
 		rootPath = append(rootPath, pathNode)
 	}
 
-	return rootPath
+	return filepath.Join(rootPath...)
 }
 
-// GetMainScriptPath return the path of the main.sh script
-func GetMainScriptPath() string {
-	rootPath := GetProjectRootPath()
-	scriptPath := append(rootPath, "scripts")
-	scriptPath = append(scriptPath, "main.sh")
-	scriptPathJoined := filepath.Join(scriptPath...)
-
-	return scriptPathJoined
-}
-
-// GetBridgePath return the path of the main.sh script
+// GetBridgePath return the bridge folder path
 func GetBridgePath() string {
 	rootPath := GetProjectRootPath()
-	scriptPath := append(rootPath, "bridge")
-	scriptPathJoined := filepath.Join(scriptPath...)
+	bridgePath := filepath.Join(rootPath, "bridge")
 
-	return scriptPathJoined
-}
-
-// SetCommandStdOut If ENABLE_SCRIPT_LOG env variable is set as 'true' the command will show scripts logs
-func SetCommandStdOut(cmd *exec.Cmd) {
-
-	flagValue, found := os.LookupEnv("ENABLE_SCRIPT_LOG")
-	enabled, err := strconv.ParseBool(flagValue)
-
-	if err == nil && found && enabled {
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-	} else {
-		cmd.Stdout = io.Discard
-		cmd.Stderr = io.Discard
-	}
+	return bridgePath
 }

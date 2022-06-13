@@ -32,13 +32,13 @@ func RunClean(workingDir string) error {
 
 	// Copy config files
 	rootPath := testutils.GetProjectRootPath()
-	srcGenesis := append(rootPath, "scripts", "base-file", "genesis.json")
-	_, err := CopyFileToFolder(filepath.Join(srcGenesis...), filepath.Join(workingDir, "scripts", "generated"))
+	srcGenesis := filepath.Join(rootPath, "scripts", "base-file", "genesis.json")
+	_, err := CopyFileToFolder(srcGenesis, filepath.Join(workingDir, "scripts", "generated"))
 	if err != nil {
 		return err
 	}
-	srcKey := append(rootPath, "scripts", "base-file", "0x546f99f244b7b58b855330ae0e2bc1b30b41302f")
-	_, err = CopyFileToFolder(filepath.Join(srcKey...), filepath.Join(workingDir, "scripts", "generated", "keystores", "keys"))
+	srcKey := filepath.Join(rootPath, "scripts", "base-file", "0x546f99f244b7b58b855330ae0e2bc1b30b41302f")
+	_, err = CopyFileToFolder(srcKey, filepath.Join(workingDir, "scripts", "generated", "keystores", "keys"))
 	if err != nil {
 		return err
 	}

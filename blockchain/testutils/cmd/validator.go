@@ -9,9 +9,9 @@ import (
 func RunValidator(validatorIndex int) error {
 
 	rootDir := testutils.GetProjectRootPath()
-	validatorConfigPath := append(rootDir, "scripts", "generated", "config", fmt.Sprintf("validator%d.toml", validatorIndex))
+	validatorConfigPath := filepath.Join(rootDir, "scripts", "generated", "config", fmt.Sprintf("validator%d.toml", validatorIndex))
 
-	err := executeCommand(filepath.Join(rootDir...), "./madnet --config", filepath.Join(validatorConfigPath...), "validator")
+	_, err := executeCommand(rootDir, "./madnet --config", validatorConfigPath, "validator")
 
 	if err != nil {
 		return err

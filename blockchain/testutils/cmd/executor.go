@@ -7,29 +7,28 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 )
 
-func executeCommand(dir string, command ...string) error {
-	args := strings.Split(strings.Join(command, " "), " ")
-	cmd := exec.Cmd{
-		Args:   args,
-		Dir:    dir,
-		Stdin:  os.Stdout,
-		Stdout: os.Stdin,
-		Stderr: os.Stderr,
-	}
+// TODO - double check github action will pick this up
 
-	err := cmd.Start()
-	if err != nil {
-		log.Printf("Could not execute command: %v", args)
-		return err
-	}
+// SetCommandStdOut If ENABLE_SCRIPT_LOG env variable is set as 'true' the command will show scripts logs
+func SetCommandStdOut(cmd *exec.Cmd) {
 
-	return nil
+	flagValue, found := os.LookupEnv("ENABLE_SCRIPT_LOG")
+	enabled, err := strconv.ParseBool(flagValue)
+
+	if err == nil && found && enabled {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	} else {
+		cmd.Stdout = io.Discard
+		cmd.Stderr = io.Discard
+	}
 }
 
-func executeCommandWithOutput(dir string, command ...string) (string, error) {
+func executeCommand(dir string, command ...string) (exec.Cmd, error) {
 	args := strings.Split(strings.Join(command, " "), " ")
 	cmd := exec.Cmd{
 		Args:   args,
@@ -42,12 +41,10 @@ func executeCommandWithOutput(dir string, command ...string) (string, error) {
 	err := cmd.Start()
 	if err != nil {
 		log.Printf("Could not execute command: %v", args)
-		return "nil", err
+		return exec.Cmd{}, err
 	}
 
-	stdout, err := cmd.Output()
-	return string(stdout), err
-
+	return cmd, nil
 }
 
 func CreateTempFolder() string {
