@@ -232,6 +232,7 @@ func (wb *WatcherBackend) Loop() {
 
 		case <-poolingTime:
 			wb.collectReceipts()
+			poolingTime = time.After(constants.TxPollingTime)
 		}
 	}
 }
@@ -306,7 +307,6 @@ func (wb *WatcherBackend) queue(req subscribeRequest) {
 			retryGroup:             wb.retryGroupId,
 		}
 		// initialize the retry group
-		wb.retryGroups = make(map[uint64]uint64)
 		wb.retryGroups[wb.retryGroupId] = 1
 		// increasing the monotonically ID
 		wb.retryGroupId++
@@ -638,6 +638,7 @@ func NewWatcher(client ethereum.Network, selectMap interfaces.ISelectorMap, txCo
 		client:             client,
 		logger:             logger.WithField("Component", "TransactionWatcherBackend"),
 		monitoredTxns:      make(map[common.Hash]info),
+		retryGroups:        make(map[uint64]uint64),
 		receiptCache:       make(map[common.Hash]receipt),
 		aggregates:         make(map[objects.FuncSelector]Profile),
 		knownSelectors:     selectMap,

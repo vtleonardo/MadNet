@@ -47,8 +47,8 @@ var (
 
 func getEthereumDetails() (*ethereum.Details, error) {
 
-	getProjectRootPath()
-	rootPath := getProjectRootPath()
+	GetProjectRootPath()
+	rootPath := GetProjectRootPath()
 
 	assetKey := append(rootPath, "assets", "test", "keys")
 	assetPasscode := append(rootPath, "assets", "test", "passcodes.txt")
@@ -290,7 +290,7 @@ func InitializePrivateKeysAndAccounts(n int) ([]*ecdsa.PrivateKey, []accounts.Ac
 }
 
 func GetOwnerAccount() (*common.Address, *ecdsa.PrivateKey, error) {
-	rootPath := getProjectRootPath()
+	rootPath := GetProjectRootPath()
 
 	// Account
 	acctAddress := configDefaultAccount
@@ -362,8 +362,8 @@ func GetOwnerAccount() (*common.Address, *ecdsa.PrivateKey, error) {
 
 func runScriptHardHatNode() error {
 
-	rootPath := getProjectRootPath()
-	scriptPath := getMainScriptPath()
+	rootPath := GetProjectRootPath()
+	scriptPath := GetMainScriptPath()
 
 	cmd := exec.Cmd{
 		Path: scriptPath,
@@ -371,7 +371,7 @@ func runScriptHardHatNode() error {
 		Dir:  filepath.Join(rootPath...),
 	}
 
-	setCommandStdOut(&cmd)
+	SetCommandStdOut(&cmd)
 	err := cmd.Start()
 	if err != nil {
 		log.Printf("Could not execute %s script: %v", scriptStartHardHatNode, err)
@@ -394,8 +394,8 @@ func RunScriptInit(n int) error {
 		return err
 	}
 
-	rootPath := getProjectRootPath()
-	scriptPath := getMainScriptPath()
+	rootPath := GetProjectRootPath()
+	scriptPath := GetMainScriptPath()
 
 	cmd := exec.Cmd{
 		Path: scriptPath,
@@ -403,7 +403,7 @@ func RunScriptInit(n int) error {
 		Dir:  filepath.Join(rootPath...),
 	}
 
-	setCommandStdOut(&cmd)
+	SetCommandStdOut(&cmd)
 	err = cmd.Start()
 	if err != nil {
 		log.Printf("Could not execute %s script: %v", scriptInit, err)
@@ -415,8 +415,8 @@ func RunScriptInit(n int) error {
 
 func runScriptClean() error {
 
-	rootPath := getProjectRootPath()
-	scriptPath := getMainScriptPath()
+	rootPath := GetProjectRootPath()
+	scriptPath := GetMainScriptPath()
 
 	cmd := exec.Cmd{
 		Path: scriptPath,
@@ -424,7 +424,7 @@ func runScriptClean() error {
 		Dir:  filepath.Join(rootPath...),
 	}
 
-	setCommandStdOut(&cmd)
+	SetCommandStdOut(&cmd)
 	err := cmd.Start()
 	if err != nil {
 		log.Printf("Could not execute %s script: %v", scriptClean, err)
@@ -436,8 +436,8 @@ func runScriptClean() error {
 
 func runScriptDeployContracts(eth *ethereum.Details, ctx context.Context) error {
 
-	rootPath := getProjectRootPath()
-	scriptPath := getMainScriptPath()
+	rootPath := GetProjectRootPath()
+	scriptPath := GetMainScriptPath()
 
 	err := os.Setenv(envSkipRegistration, "1")
 	if err != nil {
@@ -451,7 +451,7 @@ func runScriptDeployContracts(eth *ethereum.Details, ctx context.Context) error 
 		Dir:  filepath.Join(rootPath...),
 	}
 
-	setCommandStdOut(&cmd)
+	SetCommandStdOut(&cmd)
 	err = cmd.Run()
 	if err != nil {
 		log.Printf("Could not execute %s script: %v", scriptDeploy, err)
@@ -467,8 +467,8 @@ func runScriptDeployContracts(eth *ethereum.Details, ctx context.Context) error 
 
 func runScriptRegisterValidators(eth *ethereum.Details, validatorAddresses []string) error {
 
-	rootPath := getProjectRootPath()
-	scriptPath := getMainScriptPath()
+	rootPath := GetProjectRootPath()
+	scriptPath := GetMainScriptPath()
 
 	args := []string{
 		scriptPath,
@@ -483,7 +483,7 @@ func runScriptRegisterValidators(eth *ethereum.Details, validatorAddresses []str
 		Dir:  filepath.Join(rootPath...),
 	}
 
-	setCommandStdOut(&cmd)
+	SetCommandStdOut(&cmd)
 	err := cmd.Run()
 	if err != nil {
 		log.Printf("Could not execute %s script: %v", scriptRegisterValidator, err)
@@ -534,7 +534,7 @@ func sendHardhatCommand(command string, params ...interface{}) error {
 }
 
 // MineBlocks mines a certain number of hardhat blocks
-func MineBlocks(t *testing.T, eth ethereum.Network, blocksToMine uint64) {
+func MineBlocks(eth ethereum.Network, blocksToMine uint64) {
 	var blocksToMineString = "0x" + strconv.FormatUint(blocksToMine, 16)
 	log.Printf("hardhat_mine %v blocks ", blocksToMine)
 	err := sendHardhatCommand("hardhat_mine", blocksToMineString)
@@ -594,8 +594,8 @@ func SetBlockInterval(t *testing.T, eth ethereum.Network, intervalInMilliSeconds
 	}
 }
 
-// getProjectRootPath returns the project root path
-func getProjectRootPath() []string {
+// GetProjectRootPath returns the project root path
+func GetProjectRootPath() []string {
 
 	rootPath := []string{string(os.PathSeparator)}
 
@@ -618,9 +618,9 @@ func getProjectRootPath() []string {
 	return rootPath
 }
 
-// getMainScriptPath return the path of the main.sh script
-func getMainScriptPath() string {
-	rootPath := getProjectRootPath()
+// GetMainScriptPath return the path of the main.sh script
+func GetMainScriptPath() string {
+	rootPath := GetProjectRootPath()
 	scriptPath := append(rootPath, "scripts")
 	scriptPath = append(scriptPath, "main.sh")
 	scriptPathJoined := filepath.Join(scriptPath...)
@@ -628,8 +628,17 @@ func getMainScriptPath() string {
 	return scriptPathJoined
 }
 
-// setCommandStdOut If ENABLE_SCRIPT_LOG env variable is set as 'true' the command will show scripts logs
-func setCommandStdOut(cmd *exec.Cmd) {
+// GetBridgePath return the path of the main.sh script
+func GetBridgePath() string {
+	rootPath := GetProjectRootPath()
+	scriptPath := append(rootPath, "bridge")
+	scriptPathJoined := filepath.Join(scriptPath...)
+
+	return scriptPathJoined
+}
+
+// SetCommandStdOut If ENABLE_SCRIPT_LOG env variable is set as 'true' the command will show scripts logs
+func SetCommandStdOut(cmd *exec.Cmd) {
 
 	flagValue, found := os.LookupEnv("ENABLE_SCRIPT_LOG")
 	enabled, err := strconv.ParseBool(flagValue)

@@ -10,7 +10,7 @@ import (
 	"github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/state"
 	"github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/utils"
 	"github.com/MadBase/MadNet/blockchain/monitor/events"
-	"github.com/MadBase/MadNet/blockchain/testutils"
+	testutils "github.com/MadBase/MadNet/blockchain/testutils"
 	"github.com/MadBase/MadNet/blockchain/transaction"
 	"github.com/MadBase/MadNet/bridge/bindings"
 	"github.com/MadBase/MadNet/crypto/bn256"
@@ -47,6 +47,7 @@ type TestSuite struct {
 }
 
 func SetETHDKGPhaseLength(length uint16, eth ethereum.Network, callOpts *bind.TransactOpts, ctx context.Context) (*types.Transaction, *types.Receipt, error) {
+
 	// Shorten ethdkg phase for testing purposes
 	ethdkgABI, err := abi.JSON(strings.NewReader(bindings.ETHDKGMetaData.ABI))
 	if err != nil {
@@ -67,7 +68,10 @@ func SetETHDKGPhaseLength(length uint16, eth ethereum.Network, callOpts *bind.Tr
 	}
 
 	watcher := transaction.WatcherFromNetwork(eth)
-	rcpt, err := watcher.SubscribeAndWait(ctx, txn)
+	c, err := watcher.Subscribe(ctx, txn)
+	testutils.MineBlocks(eth, 12)
+	rcpt, err := watcher.Wait(ctx, c)
+
 	if err != nil {
 		return nil, nil, err
 	}
@@ -98,7 +102,10 @@ func InitializeETHDKG(eth ethereum.Network, callOpts *bind.TransactOpts, ctx con
 	}
 
 	watcher := transaction.WatcherFromNetwork(eth)
-	rcpt, err := watcher.SubscribeAndWait(ctx, txn)
+	c, err := watcher.Subscribe(ctx, txn)
+	testutils.MineBlocks(eth, 12)
+	rcpt, err := watcher.Wait(ctx, c)
+
 	if err != nil {
 		return nil, nil, err
 	}
