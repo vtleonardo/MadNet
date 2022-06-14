@@ -4,6 +4,7 @@ package dkg_test
 
 import (
 	"context"
+	"github.com/MadBase/MadNet/blockchain/testutils/cmd"
 	"testing"
 
 	"github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/testutils"
@@ -13,8 +14,9 @@ import (
 )
 
 func TestDisputeMissingShareDistributionTask_Group_1_ShouldAccuseOneValidatorWhoDidNotDistributeShares(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
-	suite := testutils.StartFromShareDistributionPhase(t, n, []int{4}, []int{}, 100)
+	suite := testutils.StartFromShareDistributionPhase(t, n, []int{4}, []int{}, 100, workingDir)
 	defer suite.Eth.Close()
 	accounts := suite.Eth.GetKnownAccounts()
 	ctx := context.Background()
@@ -39,8 +41,9 @@ func TestDisputeMissingShareDistributionTask_Group_1_ShouldAccuseOneValidatorWho
 }
 
 func TestDisputeMissingShareDistributionTask_Group_1_ShouldAccuseAllValidatorsWhoDidNotDistributeShares(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
-	suite := testutils.StartFromShareDistributionPhase(t, n, []int{0, 1, 2, 3, 4}, []int{}, 100)
+	suite := testutils.StartFromShareDistributionPhase(t, n, []int{0, 1, 2, 3, 4}, []int{}, 100, workingDir)
 	defer suite.Eth.Close()
 	accounts := suite.Eth.GetKnownAccounts()
 	ctx := context.Background()
@@ -65,8 +68,9 @@ func TestDisputeMissingShareDistributionTask_Group_1_ShouldAccuseAllValidatorsWh
 }
 
 func TestDisputeMissingShareDistributionTask_Group_1_ShouldNotAccuseValidatorsWhoDidDistributeShares(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
-	suite := testutils.StartFromShareDistributionPhase(t, n, []int{}, []int{}, 100)
+	suite := testutils.StartFromShareDistributionPhase(t, n, []int{}, []int{}, 100, workingDir)
 	defer suite.Eth.Close()
 	accounts := suite.Eth.GetKnownAccounts()
 	ctx := context.Background()
@@ -107,8 +111,9 @@ func TestDisputeMissingShareDistributionTask_Group_1_ShouldNotAccuseValidatorsWh
 }
 
 func TestDisputeMissingShareDistributionTask_Group_2_DisputeMissingShareDistributionTask_ShouldRetryTrue(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
-	suite := testutils.StartFromShareDistributionPhase(t, n, []int{0}, []int{}, 100)
+	suite := testutils.StartFromShareDistributionPhase(t, n, []int{0}, []int{}, 100, workingDir)
 	defer suite.Eth.Close()
 	accounts := suite.Eth.GetKnownAccounts()
 	ctx := context.Background()
@@ -125,8 +130,9 @@ func TestDisputeMissingShareDistributionTask_Group_2_DisputeMissingShareDistribu
 }
 
 func TestDisputeMissingShareDistributionTask_Group_2_DisputeMissingShareDistributionTask_ShouldRetryFalse(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
-	suite := testutils.StartFromShareDistributionPhase(t, n, []int{}, []int{}, 100)
+	suite := testutils.StartFromShareDistributionPhase(t, n, []int{}, []int{}, 100, workingDir)
 	defer suite.Eth.Close()
 	accounts := suite.Eth.GetKnownAccounts()
 	ctx := context.Background()
@@ -151,8 +157,9 @@ func TestDisputeMissingShareDistributionTask_Group_2_DisputeMissingShareDistribu
 }
 
 func TestDisputeMissingShareDistributionTask_Group_2_ShouldAccuseOneValidatorWhoDidNotDistributeSharesAndAnotherSubmittedBadShares(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
-	suite := testutils.StartFromShareDistributionPhase(t, n, []int{4}, []int{3}, 100)
+	suite := testutils.StartFromShareDistributionPhase(t, n, []int{4}, []int{3}, 100, workingDir)
 	defer suite.Eth.Close()
 	accounts := suite.Eth.GetKnownAccounts()
 	ctx := context.Background()

@@ -4,6 +4,7 @@ package dkg_test
 
 import (
 	"context"
+	"github.com/MadBase/MadNet/blockchain/testutils/cmd"
 	"testing"
 
 	dkgTestUtils "github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/testutils"
@@ -14,9 +15,10 @@ import (
 )
 
 func TestDisputeMissingKeySharesTask_FourUnsubmittedKeyShare_DoWork_Success(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
 	unsubmittedKeyShares := 4
-	suite := dkgTestUtils.StartFromShareDistributionPhase(t, n, []int{}, []int{}, 100)
+	suite := dkgTestUtils.StartFromShareDistributionPhase(t, n, []int{}, []int{}, 100, workingDir)
 	defer suite.Eth.Close()
 	accounts := suite.Eth.GetKnownAccounts()
 	ctx := context.Background()
@@ -75,9 +77,10 @@ func TestDisputeMissingKeySharesTask_FourUnsubmittedKeyShare_DoWork_Success(t *t
 }
 
 func TestDisputeMissingKeySharesTask_ShouldRetry_False(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
 	unsubmittedKeyShares := 1
-	suite := dkgTestUtils.StartFromShareDistributionPhase(t, n, []int{}, []int{}, 40)
+	suite := dkgTestUtils.StartFromShareDistributionPhase(t, n, []int{}, []int{}, 40, workingDir)
 	defer suite.Eth.Close()
 	ctx := context.Background()
 	eth := suite.Eth
@@ -132,9 +135,10 @@ func TestDisputeMissingKeySharesTask_ShouldRetry_False(t *testing.T) {
 }
 
 func TestDisputeMissingKeySharesTask_ShouldRetry_True(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
 	unsubmittedKeyShares := 1
-	suite := dkgTestUtils.StartFromShareDistributionPhase(t, n, []int{}, []int{}, 100)
+	suite := dkgTestUtils.StartFromShareDistributionPhase(t, n, []int{}, []int{}, 100, workingDir)
 	defer suite.Eth.Close()
 	ctx := context.Background()
 	eth := suite.Eth

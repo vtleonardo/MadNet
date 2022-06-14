@@ -4,6 +4,7 @@ package dkg_test
 
 import (
 	"context"
+	"github.com/MadBase/MadNet/blockchain/testutils/cmd"
 	"testing"
 
 	"github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/testutils"
@@ -12,9 +13,10 @@ import (
 )
 
 func TestDisputeMissingRegistrationTask_Group_1_DoTaskSuccessOneParticipantAccused(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 4
 	d := 1
-	suite := testutils.StartFromRegistrationOpenPhase(t, n, d, 100)
+	suite := testutils.StartFromRegistrationOpenPhase(t, n, d, 100, workingDir)
 	defer suite.Eth.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -41,9 +43,10 @@ func TestDisputeMissingRegistrationTask_Group_1_DoTaskSuccessOneParticipantAccus
 }
 
 func TestDisputeMissingRegistrationTask_Group_1_DoTaskSuccessThreeParticipantAccused(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
 	d := 3
-	suite := testutils.StartFromRegistrationOpenPhase(t, n, d, 100)
+	suite := testutils.StartFromRegistrationOpenPhase(t, n, d, 100, workingDir)
 	defer suite.Eth.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -70,9 +73,10 @@ func TestDisputeMissingRegistrationTask_Group_1_DoTaskSuccessThreeParticipantAcc
 }
 
 func TestDisputeMissingRegistrationTask_Group_1_DoTaskSuccessAllParticipantsAreBad(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
 	d := 5
-	suite := testutils.StartFromRegistrationOpenPhase(t, n, d, 100)
+	suite := testutils.StartFromRegistrationOpenPhase(t, n, d, 100, workingDir)
 	defer suite.Eth.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -99,7 +103,8 @@ func TestDisputeMissingRegistrationTask_Group_1_DoTaskSuccessAllParticipantsAreB
 }
 
 func TestDisputeMissingRegistrationTask_Group_2_ShouldRetryTrue(t *testing.T) {
-	suite := testutils.StartFromRegistrationOpenPhase(t, 5, 1, 100)
+	workingDir := cmd.CreateTestWorkingFolder()
+	suite := testutils.StartFromRegistrationOpenPhase(t, 5, 1, 100, workingDir)
 	defer suite.Eth.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -118,7 +123,8 @@ func TestDisputeMissingRegistrationTask_Group_2_ShouldRetryTrue(t *testing.T) {
 }
 
 func TestDisputeMissingRegistrationTask_Group_2_ShouldNotRetryAfterSuccessfullyAccusingAllMissingParticipants(t *testing.T) {
-	suite := testutils.StartFromRegistrationOpenPhase(t, 5, 0, 100)
+	workingDir := cmd.CreateTestWorkingFolder()
+	suite := testutils.StartFromRegistrationOpenPhase(t, 5, 0, 100, workingDir)
 	defer suite.Eth.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())

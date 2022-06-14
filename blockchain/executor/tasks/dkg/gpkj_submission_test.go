@@ -9,6 +9,7 @@ import (
 	dkgTestUtils "github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/testutils"
 	"github.com/MadBase/MadNet/blockchain/monitor/interfaces"
 	"github.com/MadBase/MadNet/blockchain/testutils"
+	"github.com/MadBase/MadNet/blockchain/testutils/cmd"
 	"math/big"
 	"testing"
 
@@ -19,8 +20,9 @@ import (
 
 //We test to ensure that everything behaves correctly.
 func TestGPKjSubmission_Group_1_GoodAllValid(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 4
-	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100)
+	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100, workingDir)
 	defer suite.Eth.Close()
 	accounts := suite.Eth.GetKnownAccounts()
 	ctx := context.Background()
@@ -121,8 +123,9 @@ func TestGPKjSubmission_Group_2_Bad3(t *testing.T) {
 	// that is, attempting to verify initialMessage with the signature
 	// and public key should fail verification.
 	// This should raise an error, as this is not allowed by the protocol.
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 4
-	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100)
+	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100, workingDir)
 	defer suite.Eth.Close()
 	ctx := context.Background()
 	eth := suite.Eth
@@ -150,8 +153,9 @@ func TestGPKjSubmission_Group_2_Bad3(t *testing.T) {
 }
 
 func TestGPKjSubmission_Group_2_ShouldRetry_returnsFalse(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 4
-	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100)
+	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100, workingDir)
 	defer suite.Eth.Close()
 	ctx := context.Background()
 	eth := suite.Eth
@@ -173,8 +177,9 @@ func TestGPKjSubmission_Group_2_ShouldRetry_returnsFalse(t *testing.T) {
 }
 
 func TestGPKjSubmission_Group_2_ShouldRetry_returnsTrue(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 4
-	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100)
+	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100, workingDir)
 	defer suite.Eth.Close()
 	ctx := context.Background()
 	eth := suite.Eth

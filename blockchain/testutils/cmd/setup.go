@@ -16,6 +16,7 @@ func RunSetup(workingDir string) error {
 		filepath.Join("scripts", "generated", "monitorDBs"),
 		filepath.Join("scripts", "generated", "config"),
 		filepath.Join("scripts", "generated", "keystores"),
+		filepath.Join("scripts", "generated", "keystores", "keys"),
 		filepath.Join("assets", "test", "keys"),
 	}
 	for _, folder := range folders {
@@ -68,7 +69,17 @@ func RunSetup(workingDir string) error {
 	}
 	_, err = CopyFileToFolder(filepath.Join(rootPath, "assets", "test", "passcodes.txt"), filepath.Join(workingDir, "assets", "test", "passcodes.txt"))
 	if err != nil {
-		log.Fatalf("Error reading asset passcodes: %s", assetFileDir)
+		log.Fatalf("Error reading asset passcodes.txt: %s", assetFileDir)
+		return err
+	}
+	_, err = CopyFileToFolder(filepath.Join(rootPath, "scripts", "base-files", "genesis.json"), filepath.Join(workingDir, "scripts", "generated", "genesis.json"))
+	if err != nil {
+		log.Fatalf("Error reading asset genesis.json: %s", assetFileDir)
+		return err
+	}
+	_, err = CopyFileToFolder(filepath.Join(rootPath, "scripts", "base-files", "0x546f99f244b7b58b855330ae0e2bc1b30b41302f"), filepath.Join(workingDir, "scripts", "generated", "keystores", "keys", "0x546f99f244b7b58b855330ae0e2bc1b30b41302f"))
+	if err != nil {
+		log.Fatalf("Error reading asset 0x546f99f244b7b58b855330ae0e2bc1b30b41302f: %s", assetFileDir)
 		return err
 	}
 

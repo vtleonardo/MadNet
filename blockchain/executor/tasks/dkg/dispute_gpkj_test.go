@@ -4,6 +4,7 @@ package dkg_test
 
 import (
 	"context"
+	"github.com/MadBase/MadNet/blockchain/testutils/cmd"
 	"math/big"
 	"testing"
 
@@ -20,9 +21,10 @@ import (
 
 // We test to ensure that everything behaves correctly.
 func TestGPKjDispute_NoBadGPKj(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
 	unsubmittedGPKj := 0
-	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100)
+	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100, workingDir)
 	defer suite.Eth.Close()
 	accounts := suite.Eth.GetKnownAccounts()
 	ctx := context.Background()
@@ -84,9 +86,10 @@ func TestGPKjDispute_NoBadGPKj(t *testing.T) {
 
 // Here, we have a malicious gpkj submission.
 func TestGPKjDispute_1Invalid(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
 	unsubmittedGPKj := 0
-	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100)
+	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100, workingDir)
 	defer suite.Eth.Close()
 	accounts := suite.Eth.GetKnownAccounts()
 	ctx := context.Background()
@@ -162,9 +165,10 @@ func TestGPKjDispute_1Invalid(t *testing.T) {
 // We test to ensure that everything behaves correctly.
 // Here, we have a malicious accusation.
 func TestGPKjDispute_GoodMaliciousAccusation(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
 	unsubmittedGPKj := 0
-	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100)
+	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100, workingDir)
 	defer suite.Eth.Close()
 	accounts := suite.Eth.GetKnownAccounts()
 	ctx := context.Background()

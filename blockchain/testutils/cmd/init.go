@@ -44,12 +44,6 @@ func RunInit(workingDir string, numbersOfValidator int) error {
 		address = strings.ReplaceAll(address, "Address: ", "")
 		address = strings.ReplaceAll(address, "\n", "")
 
-		// Remove keyfile.json
-		err = os.Remove(filepath.Join(rootPath, "keyfile.json"))
-		if err != nil {
-			fmt.Print("Trying to remove keyfile.json that can or cannot be here. Not a problem")
-		}
-
 		// Generate private key
 		privateKey, err := RandomHex(16)
 		if err != nil {
@@ -76,6 +70,16 @@ func RunInit(workingDir string, numbersOfValidator int) error {
 		err = ReplaceGenesisBalance(workingDir)
 		if err != nil {
 			return err
+		}
+
+		// Keyfile.json
+		_, err = CopyFileToFolder(filepath.Join(rootPath, "keyfile.json"), filepath.Join(workingDir, "scripts", "generated", "keystores", "keys", address))
+		if err != nil {
+			fmt.Print("Error copying keyfile.json into generated folder")
+		}
+		err = os.Remove(filepath.Join(rootPath, "keyfile.json"))
+		if err != nil {
+			fmt.Print("Trying to remove keyfile.json ")
 		}
 
 		listeningPort += 1

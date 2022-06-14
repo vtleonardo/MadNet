@@ -40,7 +40,7 @@ func executeCommand(dir, command string, args ...string) (*exec.Cmd, []byte, err
 	output, err := cmd.Output()
 
 	if err != nil {
-		fmt.Printf("Error executing command: %v in dir: %v. %v", command, dir, err)
+		fmt.Printf("Error executing command: %v %v in dir: %v. %v", command, cmdArgs, dir, err)
 		return &exec.Cmd{}, nil, err
 	}
 
@@ -55,7 +55,7 @@ func runCommand(dir, command string, args ...string) (*exec.Cmd, []byte, error) 
 	cmd.Dir = dir
 	err := cmd.Start()
 	if err != nil {
-		fmt.Printf("Error executing command: %v in dir: %v. %v", command, dir, err)
+		fmt.Printf("Error executing command: %v %v in dir: %v. %v", command, cmdArgs, dir, err)
 		return &exec.Cmd{}, nil, err
 	}
 	return cmd, nil, err
@@ -210,4 +210,12 @@ func ReplaceGenesisBalance(workingDir string) error {
 	}
 	defer f.Close()
 	return nil
+}
+
+func CreateTestWorkingFolder() string {
+	workingDir, err := CreateTempFolder()
+	if err != nil {
+		log.Fatalf("Error creating test working directory %v", err)
+	}
+	return workingDir
 }

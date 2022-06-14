@@ -4,6 +4,7 @@ package dkg_test
 
 import (
 	"context"
+	"github.com/MadBase/MadNet/blockchain/testutils/cmd"
 	"testing"
 
 	dkgTestUtils "github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/testutils"
@@ -14,9 +15,10 @@ import (
 )
 
 func TestDisputeMissingGPKjTask_Group_1_FourUnsubmittedGPKj_DoWork_Success(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 10
 	unsubmittedGPKj := 4
-	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100)
+	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100, workingDir)
 	defer suite.Eth.Close()
 	accounts := suite.Eth.GetKnownAccounts()
 	ctx := context.Background()
@@ -66,9 +68,10 @@ func TestDisputeMissingGPKjTask_Group_1_FourUnsubmittedGPKj_DoWork_Success(t *te
 }
 
 func TestDisputeMissingGPKjTask_Group_1_ShouldRetry_False(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
 	unsubmittedKeyShares := 1
-	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 300)
+	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 300, workingDir)
 	defer suite.Eth.Close()
 	ctx := context.Background()
 	eth := suite.Eth
@@ -114,9 +117,10 @@ func TestDisputeMissingGPKjTask_Group_1_ShouldRetry_False(t *testing.T) {
 }
 
 func TestDisputeMissingGPKjTask_Group_1_ShouldRetry_True(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
 	unsubmittedKeyShares := 1
-	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100)
+	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100, workingDir)
 	defer suite.Eth.Close()
 	ctx := context.Background()
 	eth := suite.Eth
@@ -160,8 +164,9 @@ func TestDisputeMissingGPKjTask_Group_1_ShouldRetry_True(t *testing.T) {
 }
 
 func TestDisputeMissingGPKjTask_Group_2_ShouldAccuseOneValidatorWhoDidNotDistributeGPKjAndAnotherSubmittedBadGPKj(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
-	suite := dkgTestUtils.StartFromGPKjPhase(t, n, []int{4}, []int{3}, 100)
+	suite := dkgTestUtils.StartFromGPKjPhase(t, n, []int{4}, []int{3}, 100, workingDir)
 	defer suite.Eth.Close()
 	accounts := suite.Eth.GetKnownAccounts()
 	ctx := context.Background()
@@ -208,8 +213,9 @@ func TestDisputeMissingGPKjTask_Group_2_ShouldAccuseOneValidatorWhoDidNotDistrib
 }
 
 func TestDisputeMissingGPKjTask_Group_2_ShouldAccuseTwoValidatorWhoDidNotDistributeGPKjAndAnotherTwoSubmittedBadGPKj(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
-	suite := dkgTestUtils.StartFromGPKjPhase(t, n, []int{3, 4}, []int{1, 2}, 100)
+	suite := dkgTestUtils.StartFromGPKjPhase(t, n, []int{3, 4}, []int{1, 2}, 100, workingDir)
 	defer suite.Eth.Close()
 	accounts := suite.Eth.GetKnownAccounts()
 	ctx := context.Background()

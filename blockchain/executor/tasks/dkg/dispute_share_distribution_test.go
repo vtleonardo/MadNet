@@ -9,6 +9,7 @@ import (
 	dkgTestUtils "github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/testutils"
 	"github.com/MadBase/MadNet/blockchain/monitor/events"
 	"github.com/MadBase/MadNet/blockchain/testutils"
+	"github.com/MadBase/MadNet/blockchain/testutils/cmd"
 	"math/big"
 	"testing"
 
@@ -20,8 +21,9 @@ import (
 
 // We test to ensure that everything behaves correctly.
 func TestDisputeShareDistributionTask_Group_1_GoodAllValid(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
-	suite := dkgTestUtils.StartFromShareDistributionPhase(t, n, []int{}, []int{}, 100)
+	suite := dkgTestUtils.StartFromShareDistributionPhase(t, n, []int{}, []int{}, 100, workingDir)
 	defer suite.Eth.Close()
 	accounts := suite.Eth.GetKnownAccounts()
 	ctx := context.Background()
@@ -68,8 +70,9 @@ func TestDisputeShareDistributionTask_Group_1_GoodAllValid(t *testing.T) {
 // This causes another validator to submit a dispute against him,
 // causing a stake-slashing event.
 func TestDisputeShareDistributionTask_Group_1_GoodMaliciousShare(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
-	suite := dkgTestUtils.StartFromRegistrationOpenPhase(t, n, 0, 100)
+	suite := dkgTestUtils.StartFromRegistrationOpenPhase(t, n, 0, 100, workingDir)
 	defer suite.Eth.Close()
 	accounts := suite.Eth.GetKnownAccounts()
 	ctx := context.Background()
@@ -204,8 +207,9 @@ func TestDisputeShareDistributionTask_Group_2_Bad2(t *testing.T) {
 }
 
 func TestDisputeShareDistributionTask_Group_2_DoRetry_returnsFalse(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
-	suite := dkgTestUtils.StartFromShareDistributionPhase(t, n, []int{}, []int{}, 100)
+	suite := dkgTestUtils.StartFromShareDistributionPhase(t, n, []int{}, []int{}, 100, workingDir)
 	defer suite.Eth.Close()
 	ctx := context.Background()
 	logger := logging.GetLogger("test").WithField("Validator", "")
@@ -247,8 +251,9 @@ func TestDisputeShareDistributionTask_Group_2_DoRetry_returnsFalse(t *testing.T)
 }
 
 func TestDisputeShareDistributionTask_Group_2_DoRetry_returnsTrue(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
-	suite := dkgTestUtils.StartFromShareDistributionPhase(t, n, []int{}, []int{}, 100)
+	suite := dkgTestUtils.StartFromShareDistributionPhase(t, n, []int{}, []int{}, 100, workingDir)
 	defer suite.Eth.Close()
 	ctx := context.Background()
 	logger := logging.GetLogger("test").WithField("Validator", "")

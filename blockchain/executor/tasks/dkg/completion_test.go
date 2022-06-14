@@ -19,17 +19,12 @@ import (
 
 // We complete everything correctly, happy path
 func TestCompletion_Group_1_AllGood(t *testing.T) {
-	workingDir, err := cmd.CreateTempFolder()
-	if err != nil {
-		assert.Fail(t, "Failing creating temporary folder", err)
-	}
-	defer os.Remove(workingDir)
-
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 4
-	err = testutils.Init(workingDir, n)
+	err := testutils.Init(workingDir, n)
 	assert.Nil(t, err)
 
-	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100)
+	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100, workingDir)
 	defer suite.Eth.Close()
 	ctx := context.Background()
 	eth := suite.Eth
@@ -88,8 +83,9 @@ func TestCompletion_Group_1_AllGood(t *testing.T) {
 }
 
 func TestCompletion_Group_1_StartFromCompletion(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 4
-	suite := dkgTestUtils.StartFromCompletion(t, n, 100)
+	suite := dkgTestUtils.StartFromCompletion(t, n, 100, workingDir)
 	defer suite.Eth.Close()
 	ctx := context.Background()
 	eth := suite.Eth
@@ -192,8 +188,9 @@ func TestCompletion_Group_2_Bad2(t *testing.T) {
 
 // We complete everything correctly, but we do not complete in time
 func TestCompletion_Group_2_Bad3(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 4
-	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100)
+	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100, workingDir)
 	defer suite.Eth.Close()
 	ctx := context.Background()
 	eth := suite.Eth
@@ -241,8 +238,9 @@ func TestCompletion_Group_2_Bad3(t *testing.T) {
 }
 
 func TestCompletion_Group_3_ShouldRetry_returnsFalse(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 4
-	suite := dkgTestUtils.StartFromCompletion(t, n, 40)
+	suite := dkgTestUtils.StartFromCompletion(t, n, 40, workingDir)
 	defer suite.Eth.Close()
 	ctx := context.Background()
 	eth := suite.Eth
@@ -278,8 +276,9 @@ func TestCompletion_Group_3_ShouldRetry_returnsFalse(t *testing.T) {
 }
 
 func TestCompletion_Group_3_ShouldRetry_returnsTrue(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 4
-	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100)
+	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100, workingDir)
 	defer suite.Eth.Close()
 	ctx := context.Background()
 	eth := suite.Eth

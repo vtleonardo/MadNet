@@ -8,6 +8,7 @@ import (
 	dkgState "github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/state"
 	dkgTestUtils "github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/testutils"
 	"github.com/MadBase/MadNet/blockchain/testutils"
+	"github.com/MadBase/MadNet/blockchain/testutils/cmd"
 	"math/big"
 	"testing"
 
@@ -18,8 +19,9 @@ import (
 
 //We test to ensure that everything behaves correctly.
 func TestMPKSubmission_Group_1_GoodAllValid(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 4
-	suite := dkgTestUtils.StartFromKeyShareSubmissionPhase(t, n, 0, 100)
+	suite := dkgTestUtils.StartFromKeyShareSubmissionPhase(t, n, 0, 100, workingDir)
 	defer suite.Eth.Close()
 	accounts := suite.Eth.GetKnownAccounts()
 	ctx := context.Background()
@@ -85,8 +87,9 @@ func TestMPKSubmission_Group_1_Bad1(t *testing.T) {
 	// to attempt to submit the mpk.
 	// This should result in an error.
 	// EthDKG restart should be required.
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 6
-	suite := dkgTestUtils.StartFromKeyShareSubmissionPhase(t, n, 0, 100)
+	suite := dkgTestUtils.StartFromKeyShareSubmissionPhase(t, n, 0, 100, workingDir)
 	defer suite.Eth.Close()
 	ctx := context.Background()
 	eth := suite.Eth
@@ -152,8 +155,9 @@ func TestMPKSubmission_Group_2_Bad4(t *testing.T) {
 }
 
 func TestMPKSubmission_Group_2_ShouldRetry_returnsFalse(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 4
-	suite := dkgTestUtils.StartFromKeyShareSubmissionPhase(t, n, 0, 40)
+	suite := dkgTestUtils.StartFromKeyShareSubmissionPhase(t, n, 0, 40, workingDir)
 	defer suite.Eth.Close()
 	ctx := context.Background()
 	eth := suite.Eth
@@ -190,8 +194,9 @@ func TestMPKSubmission_Group_2_ShouldRetry_returnsFalse(t *testing.T) {
 }
 
 func TestMPKSubmission_Group_2_ShouldRetry_returnsTrue(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 4
-	suite := dkgTestUtils.StartFromKeyShareSubmissionPhase(t, n, 0, 100)
+	suite := dkgTestUtils.StartFromKeyShareSubmissionPhase(t, n, 0, 100, workingDir)
 	defer suite.Eth.Close()
 	ctx := context.Background()
 	eth := suite.Eth
@@ -209,8 +214,9 @@ func TestMPKSubmission_Group_2_ShouldRetry_returnsTrue(t *testing.T) {
 }
 
 func TestMPKSubmission_Group_2_LeaderElection(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 4
-	suite := dkgTestUtils.StartFromKeyShareSubmissionPhase(t, n, 0, 100)
+	suite := dkgTestUtils.StartFromKeyShareSubmissionPhase(t, n, 0, 100, workingDir)
 	defer suite.Eth.Close()
 	ctx := context.Background()
 	eth := suite.Eth

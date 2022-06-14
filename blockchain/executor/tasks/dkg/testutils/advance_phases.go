@@ -116,11 +116,11 @@ func InitializeETHDKG(eth ethereum.Network, callOpts *bind.TransactOpts, ctx con
 	return txn, rcpt, nil
 }
 
-func StartFromRegistrationOpenPhase(t *testing.T, n int, unregisteredValidators int, phaseLength uint16) *TestSuite {
+func StartFromRegistrationOpenPhase(t *testing.T, n int, unregisteredValidators int, phaseLength uint16, workingDir string) *TestSuite {
 	ecdsaPrivateKeys, accounts := testutils.InitializePrivateKeysAndAccounts(n)
 
 	//eth := testutils.GetEthereumNetwork(t, ecdsaPrivateKeys, 1000*time.Millisecond)
-	eth := testutils.GetEthereumNetwork(t, false, n, "")
+	eth := testutils.GetEthereumNetwork(t, false, n, workingDir)
 	assert.NotNil(t, eth)
 
 	ctx := context.Background()
@@ -241,8 +241,8 @@ func StartFromRegistrationOpenPhase(t *testing.T, n int, unregisteredValidators 
 	}
 }
 
-func StartFromShareDistributionPhase(t *testing.T, n int, undistributedSharesIdx []int, badSharesIdx []int, phaseLength uint16) *TestSuite {
-	suite := StartFromRegistrationOpenPhase(t, n, 0, phaseLength)
+func StartFromShareDistributionPhase(t *testing.T, n int, undistributedSharesIdx []int, badSharesIdx []int, phaseLength uint16, workingDir string) *TestSuite {
+	suite := StartFromRegistrationOpenPhase(t, n, 0, phaseLength, workingDir)
 	ctx := context.Background()
 	logger := logging.GetLogger("test").WithField("Validator", "")
 
@@ -339,8 +339,8 @@ func StartFromShareDistributionPhase(t *testing.T, n int, undistributedSharesIdx
 	return suite
 }
 
-func StartFromKeyShareSubmissionPhase(t *testing.T, n int, undistributedShares int, phaseLength uint16) *TestSuite {
-	suite := StartFromShareDistributionPhase(t, n, []int{}, []int{}, phaseLength)
+func StartFromKeyShareSubmissionPhase(t *testing.T, n int, undistributedShares int, phaseLength uint16, workingDir string) *TestSuite {
+	suite := StartFromShareDistributionPhase(t, n, []int{}, []int{}, phaseLength, workingDir)
 	ctx := context.Background()
 	logger := logging.GetLogger("test").WithField("Validator", "")
 
@@ -405,8 +405,8 @@ func StartFromKeyShareSubmissionPhase(t *testing.T, n int, undistributedShares i
 	return suite
 }
 
-func StartFromMPKSubmissionPhase(t *testing.T, n int, phaseLength uint16) *TestSuite {
-	suite := StartFromKeyShareSubmissionPhase(t, n, 0, phaseLength)
+func StartFromMPKSubmissionPhase(t *testing.T, n int, phaseLength uint16, workingDir string) *TestSuite {
+	suite := StartFromKeyShareSubmissionPhase(t, n, 0, phaseLength, workingDir)
 	ctx := context.Background()
 	logger := logging.GetLogger("test").WithField("Validator", "")
 	dkgStates := suite.DKGStates
@@ -448,8 +448,8 @@ func StartFromMPKSubmissionPhase(t *testing.T, n int, phaseLength uint16) *TestS
 	return suite
 }
 
-func StartFromGPKjPhase(t *testing.T, n int, undistributedGPKjIdx []int, badGPKjIdx []int, phaseLength uint16) *TestSuite {
-	suite := StartFromMPKSubmissionPhase(t, n, phaseLength)
+func StartFromGPKjPhase(t *testing.T, n int, undistributedGPKjIdx []int, badGPKjIdx []int, phaseLength uint16, workingDir string) *TestSuite {
+	suite := StartFromMPKSubmissionPhase(t, n, phaseLength, workingDir)
 	ctx := context.Background()
 	logger := logging.GetLogger("test").WithField("Validator", "")
 
@@ -536,8 +536,8 @@ func StartFromGPKjPhase(t *testing.T, n int, undistributedGPKjIdx []int, badGPKj
 	return suite
 }
 
-func StartFromCompletion(t *testing.T, n int, phaseLength uint16) *TestSuite {
-	suite := StartFromGPKjPhase(t, n, []int{}, []int{}, phaseLength)
+func StartFromCompletion(t *testing.T, n int, phaseLength uint16, workingDir string) *TestSuite {
+	suite := StartFromGPKjPhase(t, n, []int{}, []int{}, phaseLength, workingDir)
 
 	// move to Completion phase
 	testutils.AdvanceTo(suite.Eth, suite.CompletionTasks[0].Start+suite.DKGStates[0].ConfirmationLength)

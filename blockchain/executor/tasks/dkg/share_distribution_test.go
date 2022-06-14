@@ -8,6 +8,7 @@ import (
 	"github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/state"
 	dkgTestUtils "github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/testutils"
 	"github.com/MadBase/MadNet/blockchain/testutils"
+	"github.com/MadBase/MadNet/blockchain/testutils/cmd"
 	"github.com/MadBase/MadNet/logging"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sirupsen/logrus"
@@ -18,8 +19,9 @@ import (
 
 //Here we test the happy path.
 func TestShareDistribution_Group_1_Good(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
-	suite := dkgTestUtils.StartFromRegistrationOpenPhase(t, n, 0, 100)
+	suite := dkgTestUtils.StartFromRegistrationOpenPhase(t, n, 0, 100, workingDir)
 	defer suite.Eth.Close()
 	accounts := suite.Eth.GetKnownAccounts()
 	ctx := context.Background()
@@ -44,8 +46,9 @@ func TestShareDistribution_Group_1_Good(t *testing.T) {
 // One validator attempts to submit invalid commitments (invalid elliptic curve point).
 // This should result in a failed submission.
 func TestShareDistribution_Group_1_Bad1(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
-	suite := dkgTestUtils.StartFromRegistrationOpenPhase(t, n, 0, 100)
+	suite := dkgTestUtils.StartFromRegistrationOpenPhase(t, n, 0, 100, workingDir)
 	defer suite.Eth.Close()
 	accounts := suite.Eth.GetKnownAccounts()
 	ctx := context.Background()
@@ -106,8 +109,9 @@ func TestShareDistribution_Group_1_Bad1(t *testing.T) {
 // One validator attempts to submit invalid commitments (identity element).
 // This should result in a failed submission.
 func TestShareDistribution_Group_1_Bad2(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 4
-	suite := dkgTestUtils.StartFromRegistrationOpenPhase(t, n, 0, 100)
+	suite := dkgTestUtils.StartFromRegistrationOpenPhase(t, n, 0, 100, workingDir)
 	defer suite.Eth.Close()
 	accounts := suite.Eth.GetKnownAccounts()
 	ctx := context.Background()
@@ -168,8 +172,9 @@ func TestShareDistribution_Group_1_Bad2(t *testing.T) {
 // One validator attempts to submit invalid commitments (incorrect commitment length)
 // This should result in a failed submission.
 func TestShareDistribution_Group_2_Bad4(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
-	suite := dkgTestUtils.StartFromRegistrationOpenPhase(t, n, 0, 100)
+	suite := dkgTestUtils.StartFromRegistrationOpenPhase(t, n, 0, 100, workingDir)
 	defer suite.Eth.Close()
 	accounts := suite.Eth.GetKnownAccounts()
 	ctx := context.Background()
@@ -232,8 +237,9 @@ func TestShareDistribution_Group_2_Bad4(t *testing.T) {
 // One validator attempts to submit invalid commitments (incorrect encrypted shares length)
 // This should result in a failed submission.
 func TestShareDistribution_Group_2_Bad5(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 6
-	suite := dkgTestUtils.StartFromRegistrationOpenPhase(t, n, 0, 100)
+	suite := dkgTestUtils.StartFromRegistrationOpenPhase(t, n, 0, 100, workingDir)
 	defer suite.Eth.Close()
 	accounts := suite.Eth.GetKnownAccounts()
 	ctx := context.Background()
@@ -325,8 +331,9 @@ func TestShareDistribution_Group_3_Bad7(t *testing.T) {
 }
 
 func TestShareDistribution_Group_3_ShouldRetryTrue(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
-	suite := dkgTestUtils.StartFromRegistrationOpenPhase(t, n, 0, 100)
+	suite := dkgTestUtils.StartFromRegistrationOpenPhase(t, n, 0, 100, workingDir)
 	defer suite.Eth.Close()
 	accounts := suite.Eth.GetKnownAccounts()
 	ctx := context.Background()
@@ -347,8 +354,9 @@ func TestShareDistribution_Group_3_ShouldRetryTrue(t *testing.T) {
 }
 
 func TestShareDistribution_Group_3_ShouldRetryFalse(t *testing.T) {
+	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
-	suite := dkgTestUtils.StartFromRegistrationOpenPhase(t, n, 0, 100)
+	suite := dkgTestUtils.StartFromRegistrationOpenPhase(t, n, 0, 100, workingDir)
 	defer suite.Eth.Close()
 	accounts := suite.Eth.GetKnownAccounts()
 	ctx := context.Background()

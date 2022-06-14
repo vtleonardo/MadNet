@@ -10,38 +10,17 @@ import (
 func RunDeploy(workingDir string) error {
 
 	factoryAddress := "0x0b1F9c2b7bED6Db83295c7B5158E3806d67eC5bc" // TODO - how to calculate this
-	rootPath := GetProjectRootPath()
+	//rootPath := GetProjectRootPath()
 	bridgeDir := GetBridgePath()
 
-	_, _, err := executeCommand(bridgeDir, "npx hardhat setHardhatIntervalMining --network dev --enable-auto-mine")
+	_, _, err := runCommand(bridgeDir, "npx", "hardhat setHardhatIntervalMining --network dev --enable-auto-mine")
 	if err != nil {
 		log.Printf("Could not execute script: %v", err)
 		return err
 	}
 
-	//cp ../scripts/base-files/deploymentList ../scripts/generated/deploymentList
-	//cp ../scripts/base-files/deploymentArgsTemplate ../scripts/generated/deploymentArgsTemplate
-	deploymentList := filepath.Join(rootPath, "scripts", "base-files", "deploymentList")
-	deploymentArgsTemplate := filepath.Join(rootPath, "scripts", "base-files", "deploymentArgsTemplate")
-	ownerToml := filepath.Join(rootPath, "scripts", "base-files", "owner.toml")
-	_, err = CopyFileToFolder(deploymentList, workingDir)
-	if err != nil {
-		log.Printf("File deploymentList copied in %s", workingDir)
-		return err
-	}
-	_, err = CopyFileToFolder(deploymentArgsTemplate, workingDir)
-	if err != nil {
-		log.Printf("File deploymentArgsTemplate copied in %s", workingDir)
-		return err
-	}
-	_, err = CopyFileToFolder(ownerToml, workingDir)
-	if err != nil {
-		log.Printf("File deploymentArgsTemplate copied in %s", workingDir)
-		return err
-	}
-
 	//npx hardhat --network "$NETWORK" --show-stack-traces deployContracts --input-folder ../scripts/generated
-	_, _, err = executeCommand(bridgeDir, "npx", "hardhat --show-stack-traces deployContracts --input-folder", workingDir)
+	_, _, err = runCommand(bridgeDir, "npx", "hardhat --show-stack-traces deployContracts --input-folder", workingDir)
 	if err != nil {
 		log.Printf("Could not execute script: %v", err)
 		return err
@@ -84,7 +63,7 @@ func RunDeploy(workingDir string) error {
 	//mv "../scripts/generated/owner.toml".bk "../scripts/generated/owner.toml"
 
 	// npx hardhat fundValidators --network $NETWORK
-	_, _, err = executeCommand(bridgeDir, "npx", "hardhat --network dev fundValidators")
+	_, _, err = runCommand(bridgeDir, "npx", "hardhat --network dev fundValidators")
 	if err != nil {
 		log.Printf("Could not execute script: %v", err)
 		return err
@@ -111,14 +90,14 @@ func RunDeploy(workingDir string) error {
 	//cd $BRIDGE_DIR
 	//cd $CURRENT_WD
 	//npx hardhat setHardhatIntervalMining --network $NETWORK --interval 1000
-	_, _, err = executeCommand(bridgeDir, "npx", "hardhat setHardhatIntervalMining --interval 1000")
+	_, _, err = runCommand(bridgeDir, "npx", "hardhat setHardhatIntervalMining --interval 1000")
 	if err != nil {
 		log.Printf("Could not execute script: %v", err)
 		return err
 	}
 
 	//./scripts/main.sh register
-	err = RunRegister()
+	err = RunRegister(workingDir)
 	if err != nil {
 		log.Printf("Could not execute script: %v", err)
 		return err
@@ -127,14 +106,14 @@ func RunDeploy(workingDir string) error {
 	//
 	//cd $BRIDGE_DIR
 	//npx hardhat --network $NETWORK setMinEthereumBlocksPerSnapshot --factory-address $FACTORY_ADDRESS --block-num 10
-	_, _, err = executeCommand(bridgeDir, "npx", "hardhat setMinEthereumBlocksPerSnapshot --block-num 10 --factory-address", factoryAddress)
+	_, _, err = runCommand(bridgeDir, "npx", "hardhat setMinEthereumBlocksPerSnapshot --block-num 10 --factory-address", factoryAddress)
 	if err != nil {
 		log.Printf("Could not execute script: %v", err)
 		return err
 	}
 
 	//npx hardhat setHardhatIntervalMining --network $NETWORK
-	_, _, err = executeCommand(bridgeDir, "npx", "hardhat setHardhatIntervalMining")
+	_, _, err = runCommand(bridgeDir, "npx", "hardhat setHardhatIntervalMining")
 	if err != nil {
 		log.Printf("Could not execute script: %v", err)
 		return err
@@ -153,9 +132,9 @@ func RunDeploy(workingDir string) error {
 	//fi
 	//echo -e "failed to auto start validators terminals, manually open a terminal for each validator and execute"
 	//fi
-	generatedValidatorConfigFiles := filepath.Join(rootPath, "scripts", "generated", "config")
+	generatedValidatorConfigFiles := filepath.Join(workingDir, "scripts", "generated", "config")
 	files, _ := ioutil.ReadDir(generatedValidatorConfigFiles)
-	err = RunValidator(len(files))
+	err = RunValidator(workingDir, len(files))
 	if err != nil {
 		log.Printf("Could not execute script: %v", err)
 		return err

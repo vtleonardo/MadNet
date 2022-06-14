@@ -79,7 +79,7 @@ func startHardHat(t *testing.T, ctx context.Context, validatorsCount int, workin
 	}
 
 	log.Printf("Registering %d validators ...", len(validatorAddresses))
-	err = cmd.RunRegister()
+	err = cmd.RunRegister("")
 	if err != nil {
 		details.Close()
 		assert.Nilf(t, err, "Error registering validators: %v")
@@ -250,12 +250,7 @@ func GetOwnerAccount() (*common.Address, *ecdsa.PrivateKey, error) {
 
 func Init(workingDir string, n int) error {
 
-	err := cmd.RunClean(workingDir)
-	if err != nil {
-		return err
-	}
-
-	err = cmd.RunInit(workingDir, n)
+	err := cmd.RunInit(workingDir, n)
 	if err != nil {
 		return err
 	}
