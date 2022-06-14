@@ -19,11 +19,14 @@ import (
 
 // We complete everything correctly, happy path
 func TestCompletion_Group_1_AllGood(t *testing.T) {
-	workingDir := cmd.CreateTempFolder()
+	workingDir, err := cmd.CreateTempFolder()
+	if err != nil {
+		assert.Fail(t, "Failing creating temporary folder", err)
+	}
 	defer os.Remove(workingDir)
 
 	n := 4
-	err := testutils.Init(workingDir, n)
+	err = testutils.Init(workingDir, n)
 	assert.Nil(t, err)
 
 	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100)
@@ -134,9 +137,15 @@ func TestCompletion_Group_1_StartFromCompletion(t *testing.T) {
 // This test is meant to raise an error resulting from an invalid argument
 // for the Ethereum interface.
 func TestCompletion_Group_2_Bad1(t *testing.T) {
+	workingDir, err := cmd.CreateTempFolder()
+	if err != nil {
+		assert.Fail(t, "Failing creating temporary folder", err)
+	}
+	defer os.Remove(workingDir)
+
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.GetEthereumNetwork(t, false, 4)
+	eth := testutils.GetEthereumNetwork(t, false, 4, workingDir)
 	defer eth.Close()
 
 	acct := eth.GetKnownAccounts()[0]
@@ -149,15 +158,20 @@ func TestCompletion_Group_2_Bad1(t *testing.T) {
 	task := dkg.NewCompletionTask(state, 1, 100)
 	log := logger.WithField("TaskID", "foo")
 
-	err := task.Initialize(ctx, log, eth)
+	err = task.Initialize(ctx, log, eth)
 	assert.NotNil(t, err)
 }
 
 // We test to ensure that everything behaves correctly.
 func TestCompletion_Group_2_Bad2(t *testing.T) {
+	workingDir, err := cmd.CreateTempFolder()
+	if err != nil {
+		assert.Fail(t, "Failing creating temporary folder", err)
+	}
+	defer os.Remove(workingDir)
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.GetEthereumNetwork(t, false, 4)
+	eth := testutils.GetEthereumNetwork(t, false, 4, workingDir)
 	defer eth.Close()
 
 	acct := eth.GetKnownAccounts()[0]
@@ -170,7 +184,7 @@ func TestCompletion_Group_2_Bad2(t *testing.T) {
 	log := logger.WithField("TaskID", "foo")
 	task := dkg.NewCompletionTask(state, 1, 100)
 
-	err := task.Initialize(ctx, log, eth)
+	err = task.Initialize(ctx, log, eth)
 	if err == nil {
 		t.Fatal("Should have raised error")
 	}

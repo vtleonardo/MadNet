@@ -21,7 +21,7 @@ func TestConnectSimulatorEndpoint(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := GetEthereumNetwork(t, tt.cleanStart); !reflect.DeepEqual(got, tt.want) {
+			if got := GetEthereumNetwork(t, tt.cleanStart, 8, ""); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetEthereumNetwork() = %v, want %v", got, tt.want)
 			}
 		})

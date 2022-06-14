@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/MadBase/MadNet/blockchain/ethereum"
-	"github.com/MadBase/MadNet/blockchain/testutils"
 	"log"
 	"net/http"
 	"os"
@@ -37,8 +36,8 @@ func IsHardHatRunning() (bool, error) {
 
 func RunHardHatNode() error {
 
-	bridgePath := testutils.GetBridgePath()
-	cmd, err := executeCommand(bridgePath, "npx hardhat node --show-stack-traces")
+	bridgePath := GetBridgePath()
+	cmd, _, err := runCommand(bridgePath, "npx", "hardhat", "node", "--show-stack-traces")
 	if err != nil {
 		return err
 	}

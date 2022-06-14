@@ -19,8 +19,6 @@ import (
 	"log"
 	"math/big"
 	"net/http"
-	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -34,11 +32,10 @@ var (
 	configFinalityDelay  = uint64(1)
 )
 
-func getEthereumDetails() (*ethereum.Details, error) {
+func getEthereumDetails(workingDir string) (*ethereum.Details, error) {
 
-	rootPath := GetProjectRootPath()
-	assetKey := filepath.Join(rootPath, "assets", "test", "keys")
-	assetPasscode := filepath.Join(rootPath, "assets", "test", "passcodes.txt")
+	assetKey := filepath.Join(workingDir, "assets", "test", "keys")
+	assetPasscode := filepath.Join(workingDir, "assets", "test", "passcodes.txt")
 
 	details, err := ethereum.NewEndpoint(
 		configEndpoint,
@@ -61,7 +58,7 @@ func startHardHat(t *testing.T, ctx context.Context, validatorsCount int, workin
 	err = cmd.WaitForHardHatNode(ctx)
 	assert.Nilf(t, err, "Failed to wait for hardhat to be up and running")
 
-	details, err := getEthereumDetails()
+	details, err := getEthereumDetails(workingDir)
 	assert.Nilf(t, err, "Failed to build Ethereum endpoint")
 	assert.NotNilf(t, details, "Ethereum network should not be Nil")
 
@@ -120,7 +117,7 @@ func GetEthereumNetwork(t *testing.T, cleanStart bool, validatorsCount int, work
 		return details
 	}
 
-	network, err := getEthereumDetails()
+	network, err := getEthereumDetails(workingDir)
 	assert.Nilf(t, err, "Failed to build Ethereum endpoint")
 	assert.NotNilf(t, network, "Ethereum network should not be Nil")
 
@@ -189,7 +186,7 @@ func InitializePrivateKeysAndAccounts(n int) ([]*ecdsa.PrivateKey, []accounts.Ac
 }
 
 func GetOwnerAccount() (*common.Address, *ecdsa.PrivateKey, error) {
-	rootPath := GetProjectRootPath()
+	rootPath := cmd.GetProjectRootPath()
 
 	// Account
 	acctAddress := configDefaultAccount
@@ -372,36 +369,4 @@ func SetBlockInterval(t *testing.T, eth ethereum.Network, intervalInMilliSeconds
 	if err != nil {
 		panic(err)
 	}
-}
-
-// GetProjectRootPath returns the project root path
-func GetProjectRootPath() string {
-
-	rootPath := []string{string(os.PathSeparator)}
-
-	cmd := exec.Command("go", "list", "-m", "-f", "'{{.Dir}}'", "github.com/MadBase/MadNet")
-	stdout, err := cmd.Output()
-	if err != nil {
-		log.Printf("Error getting project root path: %v", err)
-		return ""
-	}
-
-	path := string(stdout)
-	path = strings.ReplaceAll(path, "'", "")
-	path = strings.ReplaceAll(path, "\n", "")
-
-	pathNodes := strings.Split(path, string(os.PathSeparator))
-	for _, pathNode := range pathNodes {
-		rootPath = append(rootPath, pathNode)
-	}
-
-	return filepath.Join(rootPath...)
-}
-
-// GetBridgePath return the bridge folder path
-func GetBridgePath() string {
-	rootPath := GetProjectRootPath()
-	bridgePath := filepath.Join(rootPath, "bridge")
-
-	return bridgePath
 }

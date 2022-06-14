@@ -120,7 +120,7 @@ func StartFromRegistrationOpenPhase(t *testing.T, n int, unregisteredValidators 
 	ecdsaPrivateKeys, accounts := testutils.InitializePrivateKeysAndAccounts(n)
 
 	//eth := testutils.GetEthereumNetwork(t, ecdsaPrivateKeys, 1000*time.Millisecond)
-	eth := testutils.GetEthereumNetwork(t, false, n)
+	eth := testutils.GetEthereumNetwork(t, false, n, "")
 	assert.NotNil(t, eth)
 
 	ctx := context.Background()

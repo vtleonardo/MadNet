@@ -10,7 +10,7 @@ import (
 )
 
 func TestEthereum_AccountsFound(t *testing.T) {
-	eth := testutils.GetEthereumNetwork(t, false)
+	eth := testutils.GetEthereumNetwork(t, false, 4, "")
 	defer eth.Close()
 
 	accountList := eth.GetKnownAccounts()

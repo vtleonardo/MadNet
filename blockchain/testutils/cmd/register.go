@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"github.com/MadBase/MadNet/blockchain/testutils"
 	"io/ioutil"
 	"log"
 	"path/filepath"
@@ -10,8 +9,8 @@ import (
 
 func RunRegister() error {
 
-	bridgeDir := testutils.GetBridgePath()
-	rootDir := testutils.GetProjectRootPath()
+	bridgeDir := GetBridgePath()
+	rootDir := GetProjectRootPath()
 	factoryAddress := "0x0b1F9c2b7bED6Db83295c7B5158E3806d67eC5bc" // TODO - how to calculate this
 	// TODO - get the right path
 	keys := filepath.Join(rootDir, "scripts", "generated", "keystores", "keys")
@@ -27,7 +26,7 @@ func RunRegister() error {
 	}
 
 	// Register validator
-	_, err = executeCommand(bridgeDir, "npx hardhat --network dev --show-stack-traces registerValidators --factory-address", factoryAddress, strings.Join(validators, " "))
+	_, _, err = executeCommand(bridgeDir, "npx", "hardhat --network dev --show-stack-traces registerValidators --factory-address", factoryAddress, strings.Join(validators, " "))
 	if err != nil {
 		log.Printf("Could not execute script: %v", err)
 		return err

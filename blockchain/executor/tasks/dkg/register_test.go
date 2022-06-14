@@ -28,7 +28,7 @@ func TestRegisterTask_Group_1_Task(t *testing.T) {
 
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.GetEthereumNetwork(t, false, 5)
+	eth := testutils.GetEthereumNetwork(t, false, 5, "")
 	defer eth.Close()
 
 	acct := eth.GetKnownAccounts()[0]
@@ -106,7 +106,7 @@ func TestRegisterTask_Group_1_Task(t *testing.T) {
 func TestRegisterTask_Group_1_Good2(t *testing.T) {
 	n := 6
 	_, accounts := testutils.InitializePrivateKeysAndAccounts(n)
-	eth := testutils.GetEthereumNetwork(t, false, 6)
+	eth := testutils.GetEthereumNetwork(t, false, 6, "")
 	assert.NotNil(t, eth)
 	defer eth.Close()
 
@@ -193,7 +193,7 @@ func TestRegisterTask_Group_1_Good2(t *testing.T) {
 func TestRegisterTask_Group_1_Bad1(t *testing.T) {
 	n := 5
 	_, accounts := testutils.InitializePrivateKeysAndAccounts(n)
-	eth := testutils.GetEthereumNetwork(t, false, 5)
+	eth := testutils.GetEthereumNetwork(t, false, 5, "")
 	assert.NotNil(t, eth)
 	defer eth.Close()
 
@@ -252,7 +252,7 @@ func TestRegisterTask_Group_1_Bad1(t *testing.T) {
 func TestRegisterTask_Group_2_Bad2(t *testing.T) {
 	n := 7
 	_, accounts := testutils.InitializePrivateKeysAndAccounts(n)
-	eth := testutils.GetEthereumNetwork(t, false, 7)
+	eth := testutils.GetEthereumNetwork(t, false, 7, "")
 	assert.NotNil(t, eth)
 	defer eth.Close()
 
@@ -306,7 +306,7 @@ func TestRegisterTask_Group_2_Bad2(t *testing.T) {
 
 // The initialization should fail because we dont allow less than 4 validators
 func TestRegisterTask_Group_2_Bad4(t *testing.T) {
-	eth := testutils.GetEthereumNetwork(t, false, 3)
+	eth := testutils.GetEthereumNetwork(t, false, 3, "")
 	assert.NotNil(t, eth)
 	defer eth.Close()
 
@@ -334,7 +334,7 @@ func TestRegisterTask_Group_2_Bad4(t *testing.T) {
 func TestRegisterTask_Group_2_Bad5(t *testing.T) {
 	n := 5
 	_, accounts := testutils.InitializePrivateKeysAndAccounts(n)
-	eth := testutils.GetEthereumNetwork(t, false, 5)
+	eth := testutils.GetEthereumNetwork(t, false, 5, "")
 	assert.NotNil(t, eth)
 	defer eth.Close()
 
@@ -399,7 +399,7 @@ func TestRegisterTask_Group_3_ShouldRetryFalse(t *testing.T) {
 
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.GetEthereumNetwork(t, false, 5)
+	eth := testutils.GetEthereumNetwork(t, false, 5, "")
 	defer eth.Close()
 
 	acct := eth.GetKnownAccounts()[0]
@@ -486,7 +486,7 @@ func TestRegisterTask_Group_3_ShouldRetryTrue(t *testing.T) {
 
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.GetEthereumNetwork(t, false, 5)
+	eth := testutils.GetEthereumNetwork(t, false, 5, "")
 	defer eth.Close()
 
 	acct := eth.GetKnownAccounts()[0]
