@@ -35,7 +35,6 @@ func RunSetup(workingDir string) error {
 		return err
 	}
 	for _, file := range files {
-		fmt.Println(file.Name(), file.IsDir())
 		src := filepath.Join(configurationFileDir, file.Name())
 		dst := filepath.Join(workingDir, "scripts", "base-files", file.Name())
 		_, err = CopyFileToFolder(src, dst)
@@ -53,7 +52,6 @@ func RunSetup(workingDir string) error {
 		return err
 	}
 	for _, file := range files {
-		fmt.Println(file.Name(), file.IsDir())
 		src := filepath.Join(assetFileDir, file.Name())
 		dst := filepath.Join(workingDir, "assets", "test", "keys", file.Name())
 		_, err = CopyFileToFolder(src, dst)
@@ -80,6 +78,21 @@ func RunSetup(workingDir string) error {
 	_, err = CopyFileToFolder(filepath.Join(rootPath, "scripts", "base-files", "0x546f99f244b7b58b855330ae0e2bc1b30b41302f"), filepath.Join(workingDir, "scripts", "generated", "keystores", "keys", "0x546f99f244b7b58b855330ae0e2bc1b30b41302f"))
 	if err != nil {
 		log.Fatalf("Error reading asset 0x546f99f244b7b58b855330ae0e2bc1b30b41302f: %s", assetFileDir)
+		return err
+	}
+	_, err = CopyFileToFolder(filepath.Join(rootPath, "scripts", "base-files", "deploymentList"), filepath.Join(workingDir, "scripts", "generated", "deploymentList"))
+	if err != nil {
+		log.Fatalf("Error reading asset deploymentList: %s", assetFileDir)
+		return err
+	}
+	_, err = CopyFileToFolder(filepath.Join(rootPath, "scripts", "base-files", "deploymentArgsTemplate"), filepath.Join(workingDir, "scripts", "generated", "deploymentArgsTemplate"))
+	if err != nil {
+		log.Fatalf("Error reading asset deploymentArgsTemplate: %s", assetFileDir)
+		return err
+	}
+	_, err = CopyFileToFolder(filepath.Join(rootPath, "scripts", "base-files", "owner.toml"), filepath.Join(workingDir, "scripts", "generated", "owner.toml"))
+	if err != nil {
+		log.Fatalf("Error reading asset owner.toml: %s", assetFileDir)
 		return err
 	}
 

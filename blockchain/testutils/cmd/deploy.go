@@ -10,9 +10,7 @@ import (
 func RunDeploy(workingDir string) error {
 
 	factoryAddress := "0x0b1F9c2b7bED6Db83295c7B5158E3806d67eC5bc" // TODO - how to calculate this
-	//rootPath := GetProjectRootPath()
 	bridgeDir := GetBridgePath()
-
 	_, _, err := runCommand(bridgeDir, "npx", "hardhat setHardhatIntervalMining --network dev --enable-auto-mine")
 	if err != nil {
 		log.Printf("Could not execute script: %v", err)
@@ -20,7 +18,7 @@ func RunDeploy(workingDir string) error {
 	}
 
 	//npx hardhat --network "$NETWORK" --show-stack-traces deployContracts --input-folder ../scripts/generated
-	_, _, err = runCommand(bridgeDir, "npx", "hardhat --show-stack-traces deployContracts --input-folder", workingDir)
+	_, _, err = runCommand(bridgeDir, "npx", "hardhat --show-stack-traces deployContracts --input-folder", filepath.Join(workingDir, "scripts", "generated"))
 	if err != nil {
 		log.Printf("Could not execute script: %v", err)
 		return err
@@ -57,10 +55,13 @@ func RunDeploy(workingDir string) error {
 	//sed -e "s/registryAddress = .*/registryAddress = AAAAAAAAA/" "../scripts/generated/config/validator1.toml" > "../scripts/generated/config/$filePath".bk &&\
 	//mv "../scripts/generated/config/$filePath".bk "../scripts/generated/config/$filePath"
 	//done
-	//
 	//cp ../scripts/base-files/owner.toml ../scripts/generated/owner.toml
 	//sed -e "s/registryAddress = .*/registryAddress = $FACTORY_ADDRESS/" "../scripts/generated/owner.toml" > "../scripts/generated/owner.toml".bk &&\
 	//mv "../scripts/generated/owner.toml".bk "../scripts/generated/owner.toml"
+	err = ReplaceOwnerRegistryAddress(workingDir, factoryAddress)
+	if err != nil {
+		log.Fatalf("ERROR - %v", err)
+	}
 
 	// npx hardhat fundValidators --network $NETWORK
 	_, _, err = runCommand(bridgeDir, "npx", "hardhat --network dev fundValidators")

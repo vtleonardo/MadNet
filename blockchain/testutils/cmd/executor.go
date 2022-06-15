@@ -212,6 +212,31 @@ func ReplaceGenesisBalance(workingDir string) error {
 	return nil
 }
 
+func ReplaceOwnerRegistryAddress(workingDir, factoryAddress string) error {
+	ownerFilePath := filepath.Join(workingDir, "scripts", "generated", "owner.toml")
+	ownerFile, err := os.ReadFile(ownerFilePath)
+	if err != nil {
+		log.Fatalf("Error reading base configuration file - %v", err)
+		return err
+	}
+	fileContent := string(ownerFile)
+	regex := regexp.MustCompile(`registryAddress = .*`)
+	result := regex.ReplaceAllString(fileContent, "registryAddress = \""+factoryAddress+"\"")
+
+	f, err := os.Create(ownerFilePath)
+	if err != nil {
+		log.Fatalf("Error creating modified genesis.json file - %v", err)
+		return err
+	}
+	_, err = fmt.Fprintf(f, "%s", result)
+	if err != nil {
+		log.Fatalf("Error writing on new genesis.json file - %v", err)
+		return err
+	}
+	defer f.Close()
+	return nil
+}
+
 func CreateTestWorkingFolder() string {
 	workingDir, err := CreateTempFolder()
 	if err != nil {
