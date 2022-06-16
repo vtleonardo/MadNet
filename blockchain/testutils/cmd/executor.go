@@ -37,15 +37,16 @@ func executeCommand(dir, command string, args ...string) (*exec.Cmd, []byte, err
 
 	cmd := exec.Command(command, cmdArgs...)
 	cmd.Dir = dir
+	cmd.Stderr = os.Stderr
 	output, err := cmd.Output()
 
 	if err != nil {
-		fmt.Printf("Error executing command: %v %v in dir: %v. %v", command, cmdArgs, dir, err)
-		return &exec.Cmd{}, nil, err
+		log.Printf("Error executing command: %v %v in dir: %v. %v", command, cmdArgs, dir, string(output))
+		return &exec.Cmd{}, output, err
 	}
+	log.Printf("Command Executed: %v %s in dir: %v. \n%s\n", command, cmdArgs, dir, string(output))
 
 	return cmd, output, err
-
 }
 
 func runCommand(dir, command string, args ...string) (*exec.Cmd, []byte, error) {
@@ -58,8 +59,8 @@ func runCommand(dir, command string, args ...string) (*exec.Cmd, []byte, error) 
 		fmt.Printf("Error executing command: %v %v in dir: %v. %v", command, cmdArgs, dir, err)
 		return &exec.Cmd{}, nil, err
 	}
-	return cmd, nil, err
 
+	return cmd, nil, err
 }
 
 // TODO - make it wait()
@@ -225,7 +226,7 @@ func ReplaceOwnerRegistryAddress(workingDir, factoryAddress string) error {
 
 	f, err := os.Create(ownerFilePath)
 	if err != nil {
-		log.Fatalf("Error creating modified genesis.json file - %v", err)
+		log.Fatalf("Error creating file %v - %v", ownerFilePath, err)
 		return err
 	}
 	_, err = fmt.Fprintf(f, "%s", result)
@@ -234,6 +235,39 @@ func ReplaceOwnerRegistryAddress(workingDir, factoryAddress string) error {
 		return err
 	}
 	defer f.Close()
+	return nil
+}
+
+func ReplaceValidatorsRegistryAddress(workingDir, factoryAddress string) error {
+	filePath := filepath.Join(workingDir, "scripts", "generated", "config")
+	files, err := ioutil.ReadDir(filePath)
+	if err != nil {
+		return err
+	}
+
+	for _, file := range files {
+		fileBytes, err := os.ReadFile(filepath.Join(filePath, file.Name()))
+		if err != nil {
+			log.Fatalf("Error reading base configuration file - %v", err)
+			return err
+		}
+		fileContent := string(fileBytes)
+		regex := regexp.MustCompile(`registryAddress = .*`)
+		result := regex.ReplaceAllString(fileContent, "registryAddress = \""+factoryAddress+"\"")
+
+		f, err := os.Create(filepath.Join(filePath, file.Name()))
+		if err != nil {
+			log.Fatalf("Error creating file %v - %v", filePath, err)
+			return err
+		}
+		_, err = fmt.Fprintf(f, "%s", result)
+		if err != nil {
+			log.Fatalf("Error writing on new genesis.json file - %v", err)
+			return err
+		}
+		defer f.Close()
+	}
+
 	return nil
 }
 

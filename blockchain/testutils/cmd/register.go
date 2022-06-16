@@ -2,15 +2,13 @@ package cmd
 
 import (
 	"io/ioutil"
-	"log"
 	"path/filepath"
 	"strings"
 )
 
-func RunRegister(workingDir string) error {
+func RunRegister(workingDir, factoryAddress string) error {
 
 	bridgeDir := GetBridgePath()
-	factoryAddress := "0x0b1F9c2b7bED6Db83295c7B5158E3806d67eC5bc" // TODO - how to calculate this
 	keys := filepath.Join(workingDir, "scripts", "generated", "keystores", "keys")
 
 	// Build validator names
@@ -20,13 +18,15 @@ func RunRegister(workingDir string) error {
 		return err
 	}
 	for _, file := range files {
+		if strings.HasPrefix(file.Name(), "0x546f99f244b") {
+			continue
+		}
 		validators = append(validators, file.Name())
 	}
 
 	// Register validator
-	_, _, err = runCommand(bridgeDir, "npx", "hardhat --network dev --show-stack-traces registerValidators --factory-address", factoryAddress, strings.Join(validators, " "))
+	_, _, err = executeCommand(bridgeDir, "npx", "hardhat --network dev --show-stack-traces registerValidators --factory-address", factoryAddress, strings.Join(validators, " "))
 	if err != nil {
-		log.Printf("Could not execute script: %v", err)
 		return err
 	}
 

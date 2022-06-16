@@ -28,13 +28,14 @@ import (
 var (
 	configEndpoint       = "http://localhost:8545"
 	configDefaultAccount = "0x546f99f244b7b58b855330ae0e2bc1b30b41302f"
-	configFactoryAddress = "0x0b1f9c2b7bed6db83295c7b5158e3806d67ec5bc"
 	configFinalityDelay  = uint64(1)
 )
 
 func getEthereumDetails(workingDir string) (*ethereum.Details, error) {
 
 	assetKey := filepath.Join(workingDir, "assets", "test", "keys")
+
+	// TODO - create file rather tahn copy
 	assetPasscode := filepath.Join(workingDir, "assets", "test", "passcodes.txt")
 
 	details, err := ethereum.NewEndpoint(
@@ -63,15 +64,17 @@ func startHardHat(t *testing.T, ctx context.Context, validatorsCount int, workin
 	assert.NotNilf(t, details, "Ethereum network should not be Nil")
 
 	log.Printf("Deploying contracts ...")
-	err = cmd.RunDeploy(workingDir)
+	factoryAddress, err := cmd.RunDeploy(workingDir)
 	if err != nil {
 		details.Close()
-		assert.Nilf(t, err, "Error deploying contracts: %v")
+		assert.Nilf(t, err, "Error deploying contracts: %v", err)
+		return nil
 	}
 	addr := common.Address{}
-	copy(addr[:], common.FromHex(configFactoryAddress))
+	copy(addr[:], common.FromHex(factoryAddress))
 	details.Contracts().Initialize(ctx, addr)
 
+	// TODO - do I need this?
 	validatorAddresses := make([]string, 0)
 	knownAccounts := details.GetKnownAccounts()
 	for _, acct := range knownAccounts[:validatorsCount] {
@@ -79,7 +82,7 @@ func startHardHat(t *testing.T, ctx context.Context, validatorsCount int, workin
 	}
 
 	log.Printf("Registering %d validators ...", len(validatorAddresses))
-	err = cmd.RunRegister("")
+	//err = cmd.RunRegister("", factoryAddress)
 	if err != nil {
 		details.Close()
 		assert.Nilf(t, err, "Error registering validators: %v")
