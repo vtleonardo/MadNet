@@ -192,6 +192,62 @@ func NewEndpoint(
 	return eth, nil
 }
 
+// NewEndpointWithAccount creates a new Ethereum abstraction
+func NewEndpointWithAccount(endpoint string, accountInput []accounts.Account, finalityDelay uint64, txMaxGasFeeAllowedInGwei uint64, endpointMinimumPeers uint32) (*Details, error) {
+
+	logger := logging.GetLogger("ethereum")
+	ownerAccount := accountInput[0]
+
+	if txMaxGasFeeAllowedInGwei < constants.EthereumMinGasFeeAllowedInGwei {
+		return nil, fmt.Errorf("txMaxGasFeeAllowedInGwei should be greater than %v Gwei", constants.EthereumMinGasFeeAllowedInGwei)
+	}
+
+	txMaxGasFeeAllowedInWei := new(big.Int).Mul(new(big.Int).SetUint64(txMaxGasFeeAllowedInGwei), new(big.Int).SetUint64(1_000_000_000))
+
+	accountList := make(map[common.Address]accounts.Account)
+	passCodes := make(map[common.Address]string)
+	for _, acc := range accountInput {
+		accountList[acc.Address] = acc
+		passCodes[acc.Address] = "abc123"
+	}
+
+	eth := &Details{
+		endpoint:           endpoint,
+		logger:             logger,
+		accounts:           accountList,
+		keys:               make(map[common.Address]*keystore.Key),
+		passCodes:          passCodes,
+		finalityDelay:      finalityDelay,
+		txMaxGasFeeAllowed: txMaxGasFeeAllowedInWei,
+	}
+
+	eth.contracts = NewContractDetails(eth)
+	eth.setDefaultAccount(ownerAccount)
+	if err := eth.unlockAccount(ownerAccount); err != nil {
+		return nil, fmt.Errorf("Could not unlock account: %v", err)
+	}
+
+	// Low level rpc client
+	ctx, cancel := context.WithTimeout(context.Background(), constants.MonitorTimeout)
+	defer cancel()
+	rpcClient, rpcErr := rpc.DialContext(ctx, endpoint)
+	if rpcErr != nil {
+		return nil, fmt.Errorf("Error in NewEndpoint at rpc.DialContext: %v", rpcErr)
+	}
+	eth.rpcClient = rpcClient
+	ethClient := ethclient.NewClient(rpcClient)
+	eth.client = ethClient
+
+	chainId, err := ethClient.ChainID(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("Error in NewEndpoint at ethClient.ChainID: %v", err)
+	}
+	eth.chainID = chainId
+
+	logger.Debug("Completed initialization")
+	return eth, nil
+}
+
 //LoadAccounts Scans the directory specified and loads all the accounts found
 func (eth *Details) loadAccounts(directoryPath string) {
 	logger := eth.logger
