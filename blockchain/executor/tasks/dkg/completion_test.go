@@ -20,7 +20,7 @@ import (
 // We complete everything correctly, happy path
 func TestCompletion_Group_1_AllGood(t *testing.T) {
 	workingDir := cmd.CreateTestWorkingFolder()
-	n := 4
+	n := 5
 	err := testutils.Init(workingDir, n)
 	assert.Nil(t, err)
 
@@ -141,7 +141,7 @@ func TestCompletion_Group_2_Bad1(t *testing.T) {
 
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.GetEthereumNetwork(t, false, 4, workingDir)
+	eth := testutils.GetEthereumNetwork(t, false, 4, workingDir, nil)
 	defer eth.Close()
 
 	acct := eth.GetKnownAccounts()[0]
@@ -167,7 +167,7 @@ func TestCompletion_Group_2_Bad2(t *testing.T) {
 	defer os.Remove(workingDir)
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.GetEthereumNetwork(t, false, 4, workingDir)
+	eth := testutils.GetEthereumNetwork(t, false, 4, workingDir, nil)
 	defer eth.Close()
 
 	acct := eth.GetKnownAccounts()[0]

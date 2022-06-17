@@ -66,8 +66,8 @@ func InitializeNewNonDetDkgStateInfo(n int) ([]*state.DkgState, []*ecdsa.Private
 
 func InitializeNewDkgStateInfo(n int, deterministicShares bool) ([]*state.DkgState, []*ecdsa.PrivateKey) {
 	// Get private keys for validators
-	privKeys := testutils.SetupPrivateKeys(n)
-	accountsArray := testutils.SetupAccounts(privKeys)
+	privKeys := testutils.GeneratePrivateKeys(n)
+	accountsArray := testutils.GenerateAccounts(privKeys)
 	dkgStates := []*state.DkgState{}
 	threshold := crypto.CalcThreshold(n)
 

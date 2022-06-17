@@ -114,7 +114,7 @@ func TestMPKSubmission_Group_1_Bad1(t *testing.T) {
 func TestMPKSubmission_Group_1_Bad2(t *testing.T) {
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.GetEthereumNetwork(t, false, 4, "")
+	eth := testutils.GetEthereumNetwork(t, false, 4, "", nil)
 	defer eth.Close()
 
 	acct := eth.GetKnownAccounts()[0]
@@ -137,7 +137,7 @@ func TestMPKSubmission_Group_1_Bad2(t *testing.T) {
 func TestMPKSubmission_Group_2_Bad4(t *testing.T) {
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.GetEthereumNetwork(t, false, 4, "")
+	eth := testutils.GetEthereumNetwork(t, false, 4, "", nil)
 	defer eth.Close()
 
 	acct := eth.GetKnownAccounts()[0]

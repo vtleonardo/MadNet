@@ -157,7 +157,7 @@ func TestDisputeShareDistributionTask_Group_1_Bad1(t *testing.T) {
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
 	//eth := testutils.GetEthereumNetwork(t, ecdsaPrivateKeys, 333*time.Millisecond)
-	eth := testutils.GetEthereumNetwork(t, false, 4, "")
+	eth := testutils.GetEthereumNetwork(t, false, 4, "", nil)
 	defer eth.Close()
 
 	acct := eth.GetKnownAccounts()[0]
@@ -182,7 +182,7 @@ func TestDisputeShareDistributionTask_Group_1_Bad1(t *testing.T) {
 func TestDisputeShareDistributionTask_Group_2_Bad2(t *testing.T) {
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
-	eth := testutils.GetEthereumNetwork(t, false, 4, "")
+	eth := testutils.GetEthereumNetwork(t, false, 4, "", nil)
 	defer eth.Close()
 
 	accts := eth.GetKnownAccounts()

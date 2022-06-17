@@ -209,6 +209,8 @@ func main() {
 					cFlags.IntVarP(intPtr, o.name, o.short, 0, o.usage)
 				} else if uint64Ptr, ok := o.value.(*uint64); ok {
 					cFlags.Uint64VarP(uint64Ptr, o.name, o.short, 0, o.usage)
+				} else if uint32Ptr, ok := o.value.(*uint32); ok {
+					cFlags.Uint32VarP(uint32Ptr, o.name, o.short, 0, o.usage)
 				} else if boolPtr, ok := o.value.(*bool); ok {
 					cFlags.BoolVarP(boolPtr, o.name, o.short, false, o.usage)
 				} else {

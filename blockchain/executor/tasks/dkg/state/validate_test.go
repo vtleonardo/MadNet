@@ -174,8 +174,8 @@ func TestMath_VerifyDistributedSharesBad3(t *testing.T) {
 	threshold := state.ThresholdForUserCount(n)
 
 	// Setup keys
-	ecdsaPrivKeys := testutils.SetupPrivateKeys(n)
-	accountsArray := testutils.SetupAccounts(ecdsaPrivKeys)
+	ecdsaPrivKeys := testutils.GeneratePrivateKeys(n)
+	accountsArray := testutils.GenerateAccounts(ecdsaPrivKeys)
 
 	// Validator Setup
 	dkgIdx := 0

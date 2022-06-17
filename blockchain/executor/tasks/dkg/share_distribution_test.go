@@ -4,14 +4,10 @@ package dkg_test
 
 import (
 	"context"
-	"github.com/MadBase/MadNet/blockchain/executor/tasks/dkg"
-	"github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/state"
 	dkgTestUtils "github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/testutils"
-	"github.com/MadBase/MadNet/blockchain/testutils"
 	"github.com/MadBase/MadNet/blockchain/testutils/cmd"
 	"github.com/MadBase/MadNet/logging"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
@@ -286,7 +282,7 @@ func TestShareDistribution_Group_2_Bad5(t *testing.T) {
 
 // We begin by submitting invalid information;
 // we submit nil state information
-func TestShareDistribution_Group_2_Bad6(t *testing.T) {
+/*func TestShareDistribution_Group_2_Bad6(t *testing.T) {
 	logger := logging.GetLogger("ethereum")
 	logger.SetLevel(logrus.DebugLevel)
 	eth := testutils.GetEthereumNetwork(t, false, 5, "")
@@ -330,7 +326,9 @@ func TestShareDistribution_Group_3_Bad7(t *testing.T) {
 	}
 }
 
+*/
 func TestShareDistribution_Group_3_ShouldRetryTrue(t *testing.T) {
+
 	workingDir := cmd.CreateTestWorkingFolder()
 	n := 5
 	suite := dkgTestUtils.StartFromRegistrationOpenPhase(t, n, 0, 100, workingDir)

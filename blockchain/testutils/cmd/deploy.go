@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"io/ioutil"
+	"github.com/ethereum/go-ethereum/common"
 	"os"
 	"path/filepath"
 	"strings"
@@ -42,12 +42,12 @@ func RunDeploy(workingDir string) (string, error) {
 		return "", nil
 	}
 
-	_, _, err = executeCommand(bridgeDir, "npx", "hardhat --network dev setHardhatIntervalMining --interval 1000")
+	_, _, err = executeCommand(bridgeDir, "npx", "hardhat --network dev setHardhatIntervalMining --interval 100")
 	if err != nil {
 		return "", err
 	}
 
-	err = RunRegister(workingDir, factoryAddress)
+	err = RunRegister(factoryAddress, []common.Address{})
 	if err != nil {
 		return "", err
 	}
@@ -62,12 +62,12 @@ func RunDeploy(workingDir string) (string, error) {
 		return "", err
 	}
 
-	generatedValidatorConfigFiles := filepath.Join(workingDir, "scripts", "generated", "config")
-	files, _ := ioutil.ReadDir(generatedValidatorConfigFiles)
-	err = RunValidator(workingDir, len(files))
-	if err != nil {
-		return "", err
-	}
+	//generatedValidatorConfigFiles := filepath.Join(workingDir, "scripts", "generated", "config")
+	//files, _ := ioutil.ReadDir(generatedValidatorConfigFiles)
+	//err = RunValidator(workingDir, len(files))
+	//if err != nil {
+	//	return "", err
+	//}
 
 	return factoryAddress, nil
 }

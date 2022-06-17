@@ -14,6 +14,9 @@ if [[ -z "${FACTORY_ADDRESS}" ]]; then
     exit 1
 fi
 
+
+ # TODO - NO NEEDED
+# CONTROL on which account will be validators (once we got the address of the factory)
 npx hardhat --network "$NETWORK" --show-stack-traces registerValidators --factory-address "$FACTORY_ADDRESS" $ADDRESSES
 
 
