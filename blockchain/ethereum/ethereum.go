@@ -3,12 +3,15 @@ package ethereum
 import (
 	"bufio"
 	"context"
+	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/big"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -193,10 +196,18 @@ func NewEndpoint(
 }
 
 // NewEndpointWithAccount creates a new Ethereum abstraction
-func NewEndpointWithAccount(endpoint string, accountInput []accounts.Account, finalityDelay uint64, txMaxGasFeeAllowedInGwei uint64, endpointMinimumPeers uint32) (*Details, error) {
+func NewEndpointWithAccount(endpoint string, workingDir string, accountInput map[accounts.Account]*ecdsa.PrivateKey, finalityDelay uint64, txMaxGasFeeAllowedInGwei uint64, endpointMinimumPeers uint32) (*Details, error) {
 
 	logger := logging.GetLogger("ethereum")
-	ownerAccount := accountInput[0]
+	log.Printf("********** At this point account pk map addresses looks like this")
+	var ownerAccount accounts.Account
+	for k := range accountInput {
+		log.Printf("%s", k.Address.String())
+		if k.Address.String() == "0x546F99F244b7B58B855330AE0E2BC1b30b41302F" {
+			ownerAccount = k
+		}
+	}
+	log.Printf("********** 4 - Owner account address in NewEndpointWithAccount() method %s", ownerAccount.Address.String())
 
 	if txMaxGasFeeAllowedInGwei < constants.EthereumMinGasFeeAllowedInGwei {
 		return nil, fmt.Errorf("txMaxGasFeeAllowedInGwei should be greater than %v Gwei", constants.EthereumMinGasFeeAllowedInGwei)
@@ -206,10 +217,6 @@ func NewEndpointWithAccount(endpoint string, accountInput []accounts.Account, fi
 
 	accountList := make(map[common.Address]accounts.Account)
 	passCodes := make(map[common.Address]string)
-	for _, acc := range accountInput {
-		accountList[acc.Address] = acc
-		passCodes[acc.Address] = "abc123"
-	}
 
 	eth := &Details{
 		endpoint:           endpoint,
@@ -221,11 +228,34 @@ func NewEndpointWithAccount(endpoint string, accountInput []accounts.Account, fi
 		txMaxGasFeeAllowed: txMaxGasFeeAllowedInWei,
 	}
 
+	keystorePath := filepath.Join(workingDir, "scripts", "generated", "keystores", "keys")
+	eth.keystore = keystore.NewKeyStore(keystorePath, keystore.StandardScryptN, keystore.StandardScryptP)
+
+	// Load accounts + passCodes
+	eth.loadAccounts(keystorePath)
+	//eth.loadWallets(accountInput, workingDir)
+
+	//for k := range accountInput {
+	//	accountList[k.Address] = k
+	//	passCodes[k.Address] = "abc123"
+	//}
+	//passcode, _ := eth.passCodes[ownerAccount.Address]
+
+	eth.addEthereumPasscodes(accountInput)
+
+	log.Printf("********** 7 - Unlock owner account %s with passphrase %s", ownerAccount.Address.String(), eth.passCodes[ownerAccount.Address])
+	err := eth.keystore.Unlock(ownerAccount, eth.passCodes[ownerAccount.Address])
+	if err != nil {
+		return nil, err
+	}
+
 	eth.contracts = NewContractDetails(eth)
 	eth.setDefaultAccount(ownerAccount)
-	if err := eth.unlockAccount(ownerAccount); err != nil {
-		return nil, fmt.Errorf("Could not unlock account: %v", err)
-	}
+	// TODO - what is the difference with the one above
+	//err := eth.unlockAccount(ownerAccount)
+	//if err != nil {
+	//	return nil, fmt.Errorf("Could not unlock account: %v", err)
+	//}
 
 	// Low level rpc client
 	ctx, cancel := context.WithTimeout(context.Background(), constants.MonitorTimeout)
@@ -249,22 +279,43 @@ func NewEndpointWithAccount(endpoint string, accountInput []accounts.Account, fi
 }
 
 //LoadAccounts Scans the directory specified and loads all the accounts found
-func (eth *Details) loadAccounts(directoryPath string) {
-	logger := eth.logger
+func (eth *Details) loadAccounts(keystorePath string) {
 
-	logger.Infof("LoadAccounts(\"%v\")...", directoryPath)
-	ks := keystore.NewKeyStore(directoryPath, keystore.StandardScryptN, keystore.StandardScryptP)
+	log.Printf("********** 5 - Load accounts from  %s", keystorePath)
+	ks := keystore.NewKeyStore(keystorePath, keystore.StandardScryptN, keystore.StandardScryptP)
 	accts := make(map[common.Address]accounts.Account, 10)
 	acctIndex := make(map[common.Address]int, 10)
+
+	log.Printf("********** 6 - Keystore contains %d wallets", len(ks.Wallets()))
 
 	var index int
 	for _, wallet := range ks.Wallets() {
 		for _, account := range wallet.Accounts() {
-			logger.Infof("... found account %v", account.Address.Hex())
+			log.Printf("    accts[%s] = account value", account.Address.String())
 			accts[account.Address] = account
 			acctIndex[account.Address] = index
 			index++
 		}
+	}
+
+	eth.accounts = accts
+	eth.accountIndex = acctIndex
+	eth.keystore = ks
+}
+
+//LoadAccounts Scans the directory specified and loads all the accounts found
+func (eth *Details) loadWallets(accountMap map[accounts.Account]*ecdsa.PrivateKey, workingDir string) {
+
+	ks := keystore.NewKeyStore(workingDir, keystore.StandardScryptN, keystore.StandardScryptP)
+	accts := make(map[common.Address]accounts.Account, 10)
+	acctIndex := make(map[common.Address]int, 10)
+
+	var index int
+	for k := range accountMap {
+		accts[k.Address] = k
+		acctIndex[k.Address] = index
+		acctIndex[k.Address] = index
+		index++
 	}
 
 	eth.accounts = accts
@@ -306,20 +357,43 @@ func (eth *Details) loadPassCodes(filePath string) error {
 	return nil
 }
 
+// LoadPasscodes loads the specified passcode file
+func (eth *Details) addEthereumPasscodes(accountMap map[accounts.Account]*ecdsa.PrivateKey) {
+	passcodes := make(map[common.Address]string)
+	for k := range accountMap {
+		passcodes[common.HexToAddress(k.Address.String())] = "abc123"
+	}
+	eth.passCodes = passcodes
+}
+
 // UnlockAccount unlocks the previously loaded account using the previously loaded passCodes
 func (eth *Details) unlockAccount(acct accounts.Account) error {
 
 	eth.logger.Infof("Unlocking account address:%v", acct.Address.String())
 
+	for k, v := range eth.passCodes {
+		log.Printf("%s=%s", k.String(), v)
+	}
 	passCode, passCodeFound := eth.passCodes[acct.Address]
 	if !passCodeFound {
 		return ErrPassCodeNotFound
 	}
 
-	err := eth.keystore.Unlock(acct, passCode)
-	if err != nil {
-		return err
-	}
+	//addr := common.Address{}
+	//addr.SetBytes([]byte("546F99F244b7B58B855330AE0E2BC1b30b41302F"))
+	//
+	//create a DkgState obj
+	//acct = accounts.Account{
+	//	Address: addr,
+	//	URL: accounts.URL{
+	//		Scheme: "http",
+	//		Path:   "",
+	//	},
+	//}
+	//err := eth.keystore.Unlock(acct, "abc123")
+	//if err != nil {
+	//	return err
+	//}
 
 	// Open the account key file
 	keyJSON, err := ioutil.ReadFile(acct.URL.Path)

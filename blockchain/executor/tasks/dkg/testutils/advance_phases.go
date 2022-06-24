@@ -11,13 +11,16 @@ import (
 	"github.com/MadBase/MadNet/blockchain/executor/tasks/dkg/utils"
 	"github.com/MadBase/MadNet/blockchain/monitor/events"
 	testutils "github.com/MadBase/MadNet/blockchain/testutils"
+	"github.com/MadBase/MadNet/blockchain/testutils/cmd"
 	"github.com/MadBase/MadNet/blockchain/transaction"
 	"github.com/MadBase/MadNet/bridge/bindings"
 	"github.com/MadBase/MadNet/crypto/bn256"
 	"github.com/MadBase/MadNet/crypto/bn256/cloudflare"
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
+	"log"
 	"math/big"
 	"strings"
 	"testing"
@@ -117,20 +120,41 @@ func InitializeETHDKG(eth ethereum.Network, callOpts *bind.TransactOpts, ctx con
 }
 
 func StartFromRegistrationOpenPhase(t *testing.T, n int, unregisteredValidators int, phaseLength uint16, workingDir string) *TestSuite {
-	ecdsaPrivateKeys, accounts := testutils.InitializePrivateKeysAndAccounts(n)
+	//ecdsaPrivateKeys, accountList := testutils.InitializePrivateKeysAndAccounts(n)
+	log.Printf("********** 0 - Testing with %d validators", n)
+
+	accountMap := testutils.InitializePrivateKeysAndAccountsMap(n)
+
+	log.Printf("*** running init")
+	err := cmd.RunInit(workingDir, n, accountMap)
+	assert.Nil(t, err)
 
 	//eth := testutils.GetEthereumNetwork(t, ecdsaPrivateKeys, 1000*time.Millisecond)
 	//eth := testutils.GetEthereumNetwork(t, false, n, workingDir)
-	eth := testutils.GetEthereumNetwork(t, false, n, workingDir, accounts)
+	eth := testutils.GetEthereumNetwork(t, false, n, workingDir, accountMap)
 	assert.NotNil(t, eth)
+	log.Printf("********** 8 - Got ETH network")
+	log.Printf("********** 9 - eth default account (owner) address: %s", eth.GetDefaultAccount().Address.String())
 
 	ctx := context.Background()
-	owner := accounts[0]
+	var owner = eth.GetDefaultAccount()
+
+	accountList := make([]accounts.Account, 0)
+	ecdsaPrivateKeys := make([]*ecdsa.PrivateKey, 0)
+	for a, k := range accountMap {
+		accountList = append(accountList, a)
+		ecdsaPrivateKeys = append(ecdsaPrivateKeys, k)
+	}
 
 	// Start EthDKG
 	ownerOpts, err := eth.GetTransactionOpts(ctx, owner)
 	assert.Nil(t, err)
+	log.Printf("********** 10 - Owner opts %v", ownerOpts)
 
+	log.Printf("********** 11 - at this point account map looks like this")
+	for v := range accountMap {
+		log.Printf("   %s", v.Address.String())
+	}
 	// Shorten ethdkg phase for testing purposes
 	_, _, err = SetETHDKGPhaseLength(phaseLength, eth, ownerOpts, ctx)
 	assert.Nil(t, err)
@@ -153,19 +177,20 @@ func StartFromRegistrationOpenPhase(t *testing.T, n int, unregisteredValidators 
 	assert.Nil(t, err)
 	assert.Equal(t, uint8(state.RegistrationOpen), phase)
 
-	valCount, err := eth.Contracts().ValidatorPool().GetValidatorsCount(callOpts)
-	assert.Nil(t, err)
-	assert.Equal(t, uint64(n), valCount.Uint64())
+	// TODO - remove owner
+	//valCount, err := eth.Contracts().ValidatorPool().GetValidatorsCount(callOpts)
+	//assert.Nil(t, err)
+	//assert.Equal(t, uint64(n), valCount.Uint64())
 
 	// Do Register task
 	regTasks := make([]*dkg.RegisterTask, n)
 	dispMissingRegTasks := make([]*dkg.DisputeMissingRegistrationTask, n)
 	dkgStates := make([]*state.DkgState, n)
 	for idx := 0; idx < n; idx++ {
-		logger := logging.GetLogger("test").WithField("Validator", accounts[idx].Address.String())
+		logger := logging.GetLogger("test").WithField("Validator", accountList[idx].Address.String())
 		// Set Registration success to true
 		state, regTask, dispMissingRegTask := events.UpdateStateOnRegistrationOpened(
-			accounts[idx],
+			accountList[idx],
 			event.StartBlock.Uint64(),
 			event.PhaseLength.Uint64(),
 			event.ConfirmationLength.Uint64(),

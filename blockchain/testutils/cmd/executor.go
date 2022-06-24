@@ -199,7 +199,7 @@ func ReplaceGenesisBalance(workingDir string) error {
 	regex := regexp.MustCompile(`balance.*`)
 	result := regex.ReplaceAllString(fileContent, "balance\": \"10000000000000000000000\" }")
 
-	f, err := os.Create(genesisFilePath)
+	f, err := os.Create(filepath.Join(workingDir, "scripts", "generated", "genesis.json"))
 	if err != nil {
 		log.Fatalf("Error creating modified genesis.json file - %v", err)
 		return err

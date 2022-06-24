@@ -19,17 +19,50 @@ import (
 	"math/big"
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 )
 
 var (
-	configEndpoint      = "http://localhost:8545"
-	ownerAccountAddress = "0x546f99f244b7b58b855330ae0e2bc1b30b41302f"
-	password            = "abc123"
+	configEndpoint = "http://localhost:8545"
+	//ownerAccountAddress = "0x546f99f244b7b58b855330ae0e2bc1b30b41302f"
+	//password            = "abc123"
 	configFinalityDelay = uint64(1)
 )
 
-func getEthereumDetails(accounts []accounts.Account) (*ethereum.Details, error) {
+func BuildTestEnvironment(t *testing.T, validatorsCount int) ([]string, error) {
+
+	workingDir := cmd.CreateTestWorkingFolder()
+
+	err := cmd.RunSetup(workingDir)
+	assert.Nil(t, err)
+
+	validatorAddresses, err := cmd.RunInit(workingDir, validatorsCount)
+	assert.Nil(t, err)
+
+	return validatorAddresses, nil
+}
+
+func getEthereumDetails(accountMap map[accounts.Account]*ecdsa.PrivateKey, workingdir string) (*ethereum.Details, error) {
+
+	//root := cmd.GetProjectRootPath()
+	//assetKey := filepath.Join(root, "assets", "test", "keys")
+	//assetPasscode := filepath.Join(root, "assets", "test", "passcodes.txt")
+	//assetKey := filepath.Join(workingDir, "scripts", "generated", "keystores", "keys")
+	//assetPasscode := filepath.Join(workingDir, "scripts", "generated", "keystores", "passcodes.txt")
+
+	details, err := ethereum.NewEndpointWithAccount(
+		configEndpoint,
+		workingdir,
+		accountMap,
+		configFinalityDelay,
+		500,
+		0,
+	)
+	return details, err
+}
+
+func getEthereumDetailsMap(workingDir string, accountsMap map[accounts.Account]*ecdsa.PrivateKey) (*ethereum.Details, error) {
 
 	//root := cmd.GetProjectRootPath()
 	//assetKey := filepath.Join(root, "assets", "test", "keys")
@@ -40,7 +73,8 @@ func getEthereumDetails(accounts []accounts.Account) (*ethereum.Details, error) 
 	// TODO - use mock
 	details, err := ethereum.NewEndpointWithAccount(
 		configEndpoint,
-		accounts,
+		workingDir,
+		accountsMap,
 		configFinalityDelay,
 		500,
 		0,
@@ -48,7 +82,7 @@ func getEthereumDetails(accounts []accounts.Account) (*ethereum.Details, error) 
 	return details, err
 }
 
-func startHardHat(t *testing.T, ctx context.Context, validatorsCount int, workingDir string, accounts []accounts.Account) *ethereum.Details {
+func startHardHat(t *testing.T, ctx context.Context, validatorsCount int, workingDir string, accountPrivateKeyMap map[accounts.Account]*ecdsa.PrivateKey) *ethereum.Details {
 
 	log.Printf("Starting HardHat ...")
 	err := cmd.RunHardHatNode()
@@ -57,12 +91,12 @@ func startHardHat(t *testing.T, ctx context.Context, validatorsCount int, workin
 	err = cmd.WaitForHardHatNode(ctx)
 	assert.Nilf(t, err, "Failed to wait for hardhat to be up and running")
 
-	details, err := getEthereumDetails(accounts)
+	details, err := getEthereumDetails(accountPrivateKeyMap, workingDir)
 	assert.Nilf(t, err, "Failed to build Ethereum endpoint")
 	assert.NotNilf(t, details, "Ethereum network should not be Nil")
 
 	log.Printf("Deploying contracts ...")
-	factoryAddress, err := cmd.RunDeploy(workingDir)
+	factoryAddress, err := cmd.RunDeploy(workingDir, accountPrivateKeyMap)
 	if err != nil {
 		details.Close()
 		assert.Nilf(t, err, "Error deploying contracts: %v", err)
@@ -80,23 +114,10 @@ func startHardHat(t *testing.T, ctx context.Context, validatorsCount int, workin
 	}
 
 	log.Printf("Registering %d validators ...", len(validatorAddresses))
-	err = cmd.RunRegister(factoryAddress, nil)
-	if err != nil {
-		details.Close()
-		assert.Nilf(t, err, "Error registering validators: %v")
-	}
-	//logger := logging.GetLogger("test").WithField("test", 0)
-
-	//log.Printf("Funding accounts ...")
-	//for _, account := range knownAccounts[1:] {
-	//	txn, err := ethereum.TransferEther(details, logger, details.GetDefaultAccount().Address, account.Address, big.NewInt(100000000000000000))
-	//	assert.Nilf(t, err, "Error in TrasferEther transaction")
-	//	assert.NotNilf(t, txn, "Expected transaction not to be nil")
-	//}
 	return details
 }
 
-func GetEthereumNetwork(t *testing.T, cleanStart bool, validatorsCount int, workingDir string, accounts []accounts.Account) ethereum.Network {
+func GetEthereumNetwork(t *testing.T, cleanStart bool, validatorsCount int, workingDir string, accountPrivateKeyMap map[accounts.Account]*ecdsa.PrivateKey) ethereum.Network {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -104,7 +125,7 @@ func GetEthereumNetwork(t *testing.T, cleanStart bool, validatorsCount int, work
 	isRunning, _ := cmd.IsHardHatRunning()
 	if !isRunning {
 		log.Printf("Hardhat is not running. Start new HardHat")
-		details := startHardHat(t, ctx, validatorsCount, workingDir, accounts)
+		details := startHardHat(t, ctx, validatorsCount, workingDir, accountPrivateKeyMap)
 		assert.NotNilf(t, details, "Expected details to be not nil")
 		return details
 	}
@@ -113,13 +134,12 @@ func GetEthereumNetwork(t *testing.T, cleanStart bool, validatorsCount int, work
 		err := cmd.StopHardHat()
 		assert.Nilf(t, err, "Failed to stopHardHat")
 
-		details := startHardHat(t, ctx, validatorsCount, workingDir, accounts)
+		details := startHardHat(t, ctx, validatorsCount, workingDir, accountPrivateKeyMap)
 		assert.NotNilf(t, details, "Expected details to be not nil")
 		return details
 	}
 
-	//network, err := getEthereumDetails(workingDir)
-	network, err := getEthereumDetails(accounts)
+	network, err := getEthereumDetailsMap(workingDir, accountPrivateKeyMap)
 	assert.Nilf(t, err, "Failed to build Ethereum endpoint")
 	assert.NotNilf(t, network, "Ethereum network should not be Nil")
 
@@ -172,6 +192,38 @@ func GenerateAccounts(privKeys []*ecdsa.PrivateKey) []accounts.Account {
 	return accountsArray
 }
 
+func InitializePrivateKeysAndAccountsMap(n int) map[accounts.Account]*ecdsa.PrivateKey {
+	_, ownerPrivateKey, err := GetOwnerAccount()
+	if err != nil {
+		// TODO - don't think panic is the right solution here
+		panic(err)
+	}
+
+	privateKeys := []*ecdsa.PrivateKey{ownerPrivateKey}
+	randomPrivateKeys := GeneratePrivateKeys(n)
+	log.Printf("********** 2 - Generated %d private keys", n)
+
+	privateKeys = append(privateKeys, randomPrivateKeys...)
+	accountsMap := GenerateAccountsMap(privateKeys)
+	log.Printf("********** 3 - Generated account Map with %d elements\n", len(accountsMap))
+
+	for k, v := range accountsMap {
+		log.Printf("     Account Address: %s - Private Key %s\n", k.Address.String(), v)
+	}
+	return accountsMap
+}
+
+// GenerateAccountsMap derives the associated addresses from private keys
+func GenerateAccountsMap(privKeys []*ecdsa.PrivateKey) map[accounts.Account]*ecdsa.PrivateKey {
+	accountPrivateKeyMap := make(map[accounts.Account]*ecdsa.PrivateKey)
+	for _, pk := range privKeys {
+		commonAddr := crypto.PubkeyToAddress(pk.PublicKey)
+		accountValue := accounts.Account{Address: commonAddr}
+		accountPrivateKeyMap[accountValue] = pk
+	}
+	return accountPrivateKeyMap
+}
+
 func InitializePrivateKeysAndAccounts(n int) ([]*ecdsa.PrivateKey, []accounts.Account) {
 	_, pKey, err := GetOwnerAccount()
 	if err != nil {
@@ -188,15 +240,16 @@ func InitializePrivateKeysAndAccounts(n int) ([]*ecdsa.PrivateKey, []accounts.Ac
 }
 
 func GetOwnerAccount() (*common.Address, *ecdsa.PrivateKey, error) {
-
+	defaultOwnerAccount := strings.ToLower("0x546F99F244b7B58B855330AE0E2BC1b30b41302F")
 	id, _ := uuid.Parse("6b2a0716-b444-46c3-a1e3-2936ddd8ecc5")
 	pk, _ := crypto.HexToECDSA("6aea45ee1273170fb525da34015e4f20ba39fe792f486ba74020bcacc9badfc1")
-	addr := common.HexToAddress("0x546F99F244b7B58B855330AE0E2BC1b30b41302F")
+	addr := common.HexToAddress(defaultOwnerAccount)
 	key := &keystore.Key{
 		Id:         id,
 		Address:    addr,
 		PrivateKey: pk,
 	}
+	log.Printf("********** 1 - OWNER ACCOUNT\n Address:%s\n PK: %s\n\n", &key.Address, key.PrivateKey)
 	return &key.Address, key.PrivateKey, nil
 }
 
@@ -232,9 +285,9 @@ func GetOwnerAccount() (*common.Address, *ecdsa.PrivateKey, error) {
 
 func Init(workingDir string, n int) error {
 
-	err := cmd.RunInit(workingDir, n)
+	// Resources setup
+	err := cmd.RunSetup(workingDir)
 	if err != nil {
-		log.Fatal("----- INIT FAILED ----")
 		return err
 	}
 

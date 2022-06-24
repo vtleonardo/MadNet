@@ -19,12 +19,10 @@ import (
 
 // We complete everything correctly, happy path
 func TestCompletion_Group_1_AllGood(t *testing.T) {
-	workingDir := cmd.CreateTestWorkingFolder()
-	n := 5
-	err := testutils.Init(workingDir, n)
+	n := 4
+	_, err := testutils.BuildTestEnvironment(t, n)
 	assert.Nil(t, err)
-
-	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100, workingDir)
+	suite := dkgTestUtils.StartFromMPKSubmissionPhase(t, n, 100)
 	defer suite.Eth.Close()
 	ctx := context.Background()
 	eth := suite.Eth

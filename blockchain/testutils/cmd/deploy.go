@@ -1,13 +1,14 @@
 package cmd
 
 import (
-	"github.com/ethereum/go-ethereum/common"
+	"crypto/ecdsa"
+	"github.com/ethereum/go-ethereum/accounts"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
-func RunDeploy(workingDir string) (string, error) {
+func RunDeploy(workingDir string, accountPrivateKeyMap map[accounts.Account]*ecdsa.PrivateKey) (string, error) {
 
 	bridgeDir := GetBridgePath()
 	_, _, err := executeCommand(bridgeDir, "npx", "hardhat --network dev setHardhatIntervalMining --enable-auto-mine")
@@ -32,6 +33,8 @@ func RunDeploy(workingDir string) (string, error) {
 		return "", err
 	}
 
+	// Replace filename
+
 	_, _, err = executeCommand(bridgeDir, "npx", "hardhat --network dev fundValidators --config-path", filepath.Join(workingDir, "scripts", "generated", "config"))
 	if err != nil {
 		return "", err
@@ -47,7 +50,14 @@ func RunDeploy(workingDir string) (string, error) {
 		return "", err
 	}
 
-	err = RunRegister(factoryAddress, []common.Address{})
+	var validatorsAddressList []string
+	for k := range accountPrivateKeyMap {
+		if k.Address.String() != "0x546F99F244b7B58B855330AE0E2BC1b30b41302F" {
+			validatorsAddressList = append(validatorsAddressList, k.Address.String())
+		}
+	}
+
+	err = RunRegister(factoryAddress, validatorsAddressList)
 	if err != nil {
 		return "", err
 	}
