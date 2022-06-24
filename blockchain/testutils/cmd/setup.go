@@ -11,11 +11,11 @@ func RunSetup(workingDir string) error {
 	if err != nil {
 		return err
 	}
-	_, err = CopyFileToFolder(filepath.Join(rootPath, "scripts", "base-files", "deploymentArgsTemplate"), filepath.Join(workingDir, "deploymentList"))
+	_, err = CopyFileToFolder(filepath.Join(rootPath, "scripts", "base-files", "deploymentArgsTemplate"), filepath.Join(workingDir, "deploymentArgsTemplate"))
 	if err != nil {
 		return err
 	}
-	_, err = CopyFileToFolder(filepath.Join(rootPath, "scripts", "base-files", "deploymentList"), filepath.Join(workingDir, "deploymentList"))
+	_, err = CopyFileToFolder(filepath.Join(rootPath, "scripts", "base-files", "genesis.json"), filepath.Join(workingDir, "genesis.json"))
 	if err != nil {
 		return err
 	}
